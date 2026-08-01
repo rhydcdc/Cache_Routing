@@ -1,0 +1,1199 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>REPREFILL</title>
+<style>
+/* ─────────────────────────────────────────────── 토큰 */
+:root{
+  color-scheme: light;
+  --plane:#f9f9f7; --surface:#fcfcfb; --surface-2:#f2f1ed;
+  --ink:#0b0b0b; --ink-2:#52514e; --muted:#898781;
+  --rule:#e1e0d9; --line:#c3c2b7; --ring:rgba(11,11,11,.10);
+  --main:#2a78d6;      /* 계열 1 — 메인 캐시(상주) */
+  --det:#eb6834;       /* 계열 2 — 읽은 세부 */
+  --main-wash:rgba(42,120,214,.10);
+  --det-wash:rgba(235,104,52,.10);
+  --track:#e1e0d9;
+  --warn:#fab219; --good:#0ca30c; --crit:#d03b3b;
+  --sans:system-ui,-apple-system,"Segoe UI","Malgun Gothic","Apple SD Gothic Neo","Noto Sans KR",sans-serif;
+  --mono:ui-monospace,"Cascadia Mono",Consolas,"D2Coding","Noto Sans Mono CJK KR",monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:where(:not([data-theme="light"])){
+    color-scheme: dark;
+    --plane:#0d0d0d; --surface:#1a1a19; --surface-2:#222220;
+    --ink:#fff; --ink-2:#c3c2b7; --muted:#898781;
+    --rule:#2c2c2a; --line:#383835; --ring:rgba(255,255,255,.10);
+    --main:#3987e5; --det:#d95926;
+    --main-wash:rgba(57,135,229,.14); --det-wash:rgba(217,89,38,.14);
+    --track:#2c2c2a;
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme: dark;
+  --plane:#0d0d0d; --surface:#1a1a19; --surface-2:#222220;
+  --ink:#fff; --ink-2:#c3c2b7; --muted:#898781;
+  --rule:#2c2c2a; --line:#383835; --ring:rgba(255,255,255,.10);
+  --main:#3987e5; --det:#d95926;
+  --main-wash:rgba(57,135,229,.14); --det-wash:rgba(217,89,38,.14);
+  --track:#2c2c2a;
+}
+@media (prefers-reduced-motion: reduce){ *{transition:none!important;animation:none!important} }
+
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  background:var(--plane); color:var(--ink); font-family:var(--sans);
+  font-size:15px; line-height:1.75; -webkit-text-size-adjust:100%;
+}
+
+/* ─────────────────────────────────────────────── 뼈대 */
+.wrap{display:grid; grid-template-columns:264px minmax(0,1fr); min-height:100vh}
+.side{
+  position:sticky; top:0; align-self:start; height:100vh; overflow-y:auto;
+  border-right:1px solid var(--rule); background:var(--surface);
+  padding:26px 18px 30px; display:flex; flex-direction:column; gap:16px;
+}
+.brand{font-size:19px; font-weight:700; letter-spacing:.02em; line-height:1.3}
+.brand small{display:block; font-size:11.5px; font-weight:400; color:var(--muted); letter-spacing:0; margin-top:6px; line-height:1.5}
+.side nav ol{list-style:none; margin:0; padding:0; counter-reset:toc}
+.side nav a{
+  display:block; padding:7px 10px; border-radius:7px; text-decoration:none;
+  color:var(--ink-2); font-size:13.5px; line-height:1.5; border-left:2px solid transparent;
+}
+.side nav a:hover{background:var(--surface-2); color:var(--ink)}
+.side nav a.on{background:var(--main-wash); color:var(--ink); font-weight:600; border-left-color:var(--main)}
+.side nav a.hero{font-weight:600; color:var(--ink)}
+.side nav li.gap{height:10px}
+.sidefoot{margin-top:auto; font-size:11.5px; color:var(--muted); display:flex; flex-direction:column; gap:8px}
+.sidefoot a{color:var(--muted)}
+.tbtn{
+  background:none; border:1px solid var(--rule); border-radius:7px; color:var(--ink-2);
+  font:inherit; font-size:12px; padding:5px 9px; cursor:pointer; width:fit-content;
+}
+.tbtn:hover{background:var(--surface-2)}
+
+main{padding:44px 48px 96px; max-width:1440px; margin:0 auto; width:100%}
+.sec{display:none}
+.sec.on{display:block}
+/* 실제 연출은 폭이 넓을수록 좋고, 산문은 줄이 길어지면 읽기 나쁘다 — 둘 다 가운데 */
+.sec:not(#demo){max-width:1120px; margin-left:auto; margin-right:auto}
+.navtoggle{display:none}
+
+/* ─────────────────────────────────────────────── 본문 타이포 */
+.sec h2{font-size:26px; line-height:1.35; margin:0 0 22px; letter-spacing:-.01em}
+.sec h3{font-size:18px; margin:34px 0 12px}
+.sec h4{font-size:15px; margin:24px 0 8px; color:var(--ink-2)}
+.sec p{margin:0 0 14px}
+.sec ul,.sec ol{margin:0 0 14px; padding-left:1.35em}
+.sec li{margin:0 0 7px}
+.sec a{color:var(--main); text-underline-offset:2px}
+.sec strong{font-weight:700}
+.sec code{
+  font-family:var(--mono); font-size:.87em; background:var(--surface-2);
+  padding:.1em .35em; border-radius:4px; border:1px solid var(--rule);
+}
+.sec pre{
+  background:var(--surface); border:1px solid var(--rule); border-radius:9px;
+  padding:14px 16px; overflow-x:auto; font-size:12.5px; line-height:1.65;
+}
+.sec pre code{background:none; border:0; padding:0; font-size:inherit}
+.sec blockquote{
+  margin:18px 0; padding:12px 18px; border-left:3px solid var(--line);
+  background:var(--surface); border-radius:0 9px 9px 0; color:var(--ink-2);
+}
+.sec blockquote > :last-child{margin-bottom:0}
+.sec blockquote h3{margin-top:4px; color:var(--ink)}
+.sec hr{border:0; border-top:1px solid var(--rule); margin:30px 0}
+
+.tablewrap{overflow-x:auto; margin:0 0 18px; border:1px solid var(--rule); border-radius:9px; background:var(--surface)}
+.sec table{border-collapse:collapse; width:100%; font-size:13.5px; line-height:1.6}
+.sec th,.sec td{padding:9px 13px; text-align:left; border-bottom:1px solid var(--rule); vertical-align:top}
+.sec thead th{background:var(--surface-2); font-weight:600; font-size:12.5px; color:var(--ink-2); white-space:nowrap}
+.sec tbody tr:last-child td{border-bottom:0}
+.sec tbody td:first-child{color:var(--ink)}
+.sec td+td,.sec th+th{border-left:1px solid var(--rule)}
+
+.secnav{display:flex; justify-content:space-between; gap:12px; margin-top:44px; padding-top:20px; border-top:1px solid var(--rule)}
+.secnav a{
+  text-decoration:none; color:var(--ink-2); font-size:13px; padding:8px 12px;
+  border:1px solid var(--rule); border-radius:8px; background:var(--surface); max-width:46%;
+}
+.secnav a:hover{background:var(--surface-2); color:var(--ink)}
+
+/* ─────────────────────────────────────────────── 실제 연출 */
+.lede{font-size:16px; color:var(--ink-2); margin:0 0 24px}
+.filters{display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin:0 0 8px}
+.filters .lbl{font-size:12px; color:var(--muted); margin-right:4px}
+.tab{
+  font:inherit; font-size:13px; padding:6px 12px; border-radius:999px; cursor:pointer;
+  border:1px solid var(--rule); background:var(--surface); color:var(--ink-2);
+}
+.tab:hover{background:var(--surface-2)}
+.tab.on{background:var(--ink); color:var(--plane); border-color:var(--ink); font-weight:600}
+.srcline{font-size:12px; color:var(--muted); margin:0 0 20px}
+
+.warnbar{
+  display:flex; gap:9px; align-items:flex-start; font-size:12.5px; line-height:1.6;
+  border:1px solid var(--rule); border-left:3px solid var(--warn);
+  background:var(--surface); border-radius:0 8px 8px 0; padding:9px 13px; margin:0 0 20px;
+  color:var(--ink-2);
+}
+.warnbar b{color:var(--ink)}
+
+.ribbon{
+  list-style:none; margin:0 0 10px; padding:0; display:grid;
+  grid-template-columns:repeat(6,minmax(0,1fr)); gap:6px;
+}
+.step{
+  border:1px solid var(--rule); background:var(--surface); border-radius:9px;
+  padding:9px 10px 10px; cursor:pointer; text-align:left; font:inherit; color:inherit;
+  display:flex; flex-direction:column; gap:3px; position:relative; min-width:0;
+  width:100%; height:100%;   /* 버튼은 안 두면 fit-content 로 줄어든다 */
+}
+.step:hover{background:var(--surface-2)}
+.step.on{border-color:var(--main); box-shadow:inset 0 0 0 1px var(--main)}
+.step .n{font-size:10.5px; color:var(--muted); letter-spacing:.06em}
+.step .nm{font-size:13px; font-weight:600; line-height:1.3}
+.step .v{font-size:12px; color:var(--ink-2); font-variant-numeric:tabular-nums; line-height:1.4}
+.step .v em{font-style:normal; color:var(--muted)}
+.step.hi .v{color:var(--main); font-weight:600}
+.stepnote{
+  font-size:13px; color:var(--ink-2); background:var(--surface); border:1px solid var(--rule);
+  border-radius:9px; padding:11px 14px; margin:0 0 22px; line-height:1.65; min-height:44px;
+}
+.stepnote b{color:var(--ink)}
+
+.qbar{margin:0 0 14px}
+.qbar .lbl{font-size:12px; color:var(--muted); display:block; margin-bottom:7px}
+.qrow{display:flex; flex-wrap:wrap; gap:8px}
+.qbtn{
+  font:inherit; font-size:13px; line-height:1.45; text-align:left; padding:8px 13px;
+  border-radius:9px; border:1px solid var(--rule); background:var(--surface);
+  color:var(--ink-2); cursor:pointer; max-width:100%;
+}
+.qbtn:hover{background:var(--surface-2)}
+.qbtn.on{border-color:var(--det); box-shadow:inset 0 0 0 1px var(--det); color:var(--ink); font-weight:600}
+.qbtn .w{color:var(--warn)}
+.reset{
+  font:inherit; font-size:12.5px; padding:8px 13px; border-radius:9px; cursor:pointer;
+  border:1px dashed var(--line); background:none; color:var(--muted);
+}
+.reset:hover{color:var(--ink); border-color:var(--ink-2)}
+
+.stage{position:relative; display:grid; grid-template-columns:minmax(0,1.15fr) 58px minmax(0,1fr); gap:0; align-items:start}
+.wire{position:absolute; inset:0; width:100%; height:100%; pointer-events:none; z-index:3; overflow:visible}
+.panel{border:1px solid var(--rule); background:var(--surface); border-radius:11px; overflow:hidden; min-width:0}
+.panel.detail{border-style:dashed}
+.panel.detail.any{border-style:solid}
+.phead{
+  display:flex; align-items:center; gap:9px; flex-wrap:wrap;
+  padding:11px 14px; border-bottom:1px solid var(--rule); background:var(--surface-2);
+}
+.phead .t{font-size:13.5px; font-weight:600}
+.phead .tok{margin-left:auto; font-size:12px; color:var(--muted); font-variant-numeric:tabular-nums}
+.badge{
+  font-size:11px; padding:2px 8px; border-radius:999px; border:1px solid var(--ring);
+  display:inline-flex; align-items:center; gap:5px; line-height:1.6;
+}
+.badge::before{content:""; width:7px; height:7px; border-radius:50%; background:currentColor}
+.badge.res{color:var(--main); background:var(--main-wash)}
+.badge.off{color:var(--muted)}
+.badge.off::before{background:none; box-shadow:inset 0 0 0 1.5px currentColor}
+.badge.lit{color:var(--det); background:var(--det-wash)}
+
+.pbody{max-height:430px; overflow:auto; padding:12px 0}
+.ln{
+  font-family:var(--mono); font-size:12.2px; line-height:1.72; white-space:pre-wrap;
+  overflow-wrap:anywhere; padding:1px 14px; color:var(--ink-2); border-left:2px solid transparent;
+}
+.ln.blank{height:.6em; padding:0}
+.ln.conv{background:var(--surface-2); color:var(--ink-2); border-left-color:var(--line)}
+.ln.hit{background:var(--main-wash); border-left-color:var(--main); color:var(--ink)}
+.mk{
+  display:inline-block; font-size:11px; font-family:var(--sans); line-height:1.5;
+  padding:0 5px; border-radius:5px; border:1px solid var(--line); color:var(--muted);
+  background:var(--surface); vertical-align:baseline;
+}
+.mk.res{border-color:var(--main); color:var(--main); background:var(--main-wash); cursor:pointer}
+.mk.act{border-color:var(--det); color:var(--det); background:var(--det-wash); font-weight:700}
+.convtag{
+  display:inline-block; font-size:10.5px; font-family:var(--sans); color:var(--muted);
+  border:1px solid var(--rule); border-radius:5px; padding:0 5px; margin-right:7px;
+}
+
+.dlist{display:flex; flex-direction:column; gap:5px; padding:0 10px}
+.dcard{
+  font:inherit; text-align:left; width:100%; cursor:pointer; border-radius:8px;
+  border:1px dashed var(--line); background:none; color:var(--muted);
+  padding:7px 10px; display:flex; gap:9px; align-items:baseline; min-width:0;
+}
+.dcard:hover{background:var(--surface-2); color:var(--ink-2)}
+.dcard .nm{font-size:12.2px; line-height:1.45; flex:1; min-width:0; overflow-wrap:anywhere}
+.dcard .tk{font-size:11.5px; font-variant-numeric:tabular-nums; white-space:nowrap}
+.dcard.lit{border:1px solid var(--det); background:var(--det-wash); color:var(--ink); font-weight:600}
+.dcard.peek{border:1px solid var(--line); background:var(--surface-2); color:var(--ink)}
+.dtext{
+  font-family:var(--mono); font-size:11.8px; line-height:1.7; white-space:pre-wrap;
+  word-break:break-word; margin:-1px 0 4px; padding:9px 11px; border-radius:0 0 8px 8px;
+  border:1px solid var(--rule); border-top:0; background:var(--surface-2); color:var(--ink-2);
+}
+.dtext .cap{display:block; font-family:var(--sans); font-size:10.5px; color:var(--muted); margin-bottom:6px}
+
+/* ── 결과 카드 */
+.result{margin-top:22px; border:1px solid var(--rule); border-radius:11px; background:var(--surface); overflow:hidden}
+.result.idle{border-style:dashed; color:var(--muted)}
+.rpad{padding:16px 18px}
+.rq{font-size:15px; font-weight:600; line-height:1.55; margin:0 0 12px}
+.rgrid{display:grid; grid-template-columns:88px minmax(0,1fr); gap:8px 14px; font-size:13px; line-height:1.6}
+.rgrid dt{color:var(--muted); font-size:12px}
+.rgrid dd{margin:0}
+.rgrid .ok{color:var(--ink)}
+.chip{
+  display:inline-block; font-size:11.5px; font-family:var(--mono); padding:1px 7px; margin:0 4px 4px 0;
+  border-radius:6px; border:1px solid var(--det); color:var(--det); background:var(--det-wash);
+}
+.quote{color:var(--ink-2); font-style:normal}
+.quote::before{content:"“"} .quote::after{content:"”"}
+.ctrl{
+  display:flex; gap:9px; align-items:flex-start; font-size:12.5px; line-height:1.6;
+  padding:8px 12px; border-radius:8px; background:var(--surface-2); margin-top:4px;
+}
+.ctrl .k{color:var(--muted); white-space:nowrap}
+.mono{font-family:var(--mono); font-size:12px}
+
+.note{
+  display:flex; gap:9px; align-items:flex-start; font-size:12.5px; line-height:1.62;
+  border-top:1px solid var(--rule); border-left:3px solid var(--warn);
+  background:var(--surface-2); padding:10px 14px; color:var(--ink-2);
+}
+.note b{color:var(--ink)}
+.note.observe{border-left-color:var(--main)}
+
+/* ── 미터 */
+.meter{border-top:1px solid var(--rule); padding:16px 18px 18px; background:var(--surface)}
+.mhead{display:flex; align-items:baseline; gap:10px; flex-wrap:wrap; margin-bottom:10px}
+.mhead .cap{font-size:12px; color:var(--muted)}
+.hero{font-size:30px; font-weight:600; line-height:1.1; letter-spacing:-.01em; margin-left:auto}
+.hero small{font-size:12px; font-weight:400; color:var(--muted); margin-left:6px; letter-spacing:0}
+.track{display:flex; gap:2px; height:14px; border-radius:4px; background:var(--track); overflow:hidden}
+.fill{height:100%; border-radius:0 4px 4px 0}
+.fill.f1{background:var(--main); border-radius:4px 4px 4px 4px}
+.fill.f2{background:var(--det)}
+.legend{display:flex; flex-wrap:wrap; gap:6px 20px; margin-top:11px; font-size:12px; color:var(--ink-2)}
+.legend span{display:inline-flex; align-items:center; gap:7px}
+.legend i{width:11px; height:11px; border-radius:3px; background:var(--muted); display:inline-block}
+.legend .k1 i{background:var(--main)} .legend .k2 i{background:var(--det)} .legend .k3 i{background:var(--track)}
+.legend b{font-variant-numeric:tabular-nums; color:var(--ink); font-weight:600}
+
+details.tv{margin-top:14px; border-top:1px solid var(--rule); padding-top:12px}
+details.tv summary{cursor:pointer; font-size:12.5px; color:var(--ink-2)}
+details.tv table{margin-top:10px}
+
+/* ─────────────────────────────────────────────── 좁은 화면 */
+@media (max-width:920px){
+  .wrap{grid-template-columns:1fr}
+  .side{
+    position:fixed; z-index:20; inset:0 auto 0 0; width:270px; height:100vh;
+    transform:translateX(-101%); transition:transform .18s ease; box-shadow:0 0 40px rgba(0,0,0,.18);
+  }
+  body.nav .side{transform:none}
+  main{padding:66px 20px 80px}
+  .navtoggle{
+    display:block; position:fixed; z-index:21; top:12px; left:12px; font:inherit; font-size:13px;
+    padding:7px 13px; border-radius:8px; border:1px solid var(--rule);
+    background:var(--surface); color:var(--ink); cursor:pointer;
+  }
+  .ribbon{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .stage{grid-template-columns:1fr; gap:12px}
+  .wire{display:none}
+  .rgrid{grid-template-columns:1fr; gap:2px 0}
+  .rgrid dt{margin-top:8px}
+}
+@media (max-width:560px){ .ribbon{grid-template-columns:repeat(2,minmax(0,1fr))} .hero{font-size:25px} }
+</style>
+</head>
+<body>
+
+<button class="navtoggle" id="navToggle" aria-label="목차 열기">☰ 목차</button>
+
+<div class="wrap">
+<aside class="side" id="side">
+  <div class="brand">REPREFILL<small>REPREFILL — 자연어를 다시 프리필해 KV 캐시를 만드는 아키텍처</small></div>
+  <nav>
+    <ol>
+      <li><a href="#demo" data-sec="demo" class="hero">아키텍처 실제 연출</a></li>
+      <li class="gap"></li>
+      <li><a href="#s1" data-sec="s1">1. 아이디어</a></li><li><a href="#s2" data-sec="s2">2. 기여 둘</a></li><li><a href="#s3" data-sec="s3">3. 자연어 층이 하는 일 — 두 개의 인터페이스</a></li><li><a href="#s4" data-sec="s4">4. 무엇과 다른가 — MoE · RAG</a></li><li><a href="#s5" data-sec="s5">5. 파이프라인</a></li><li><a href="#s6" data-sec="s6">6. 무엇이 줄어드나</a></li><li><a href="#s7" data-sec="s7">7. 오케스트레이션 정책 — 언제 하나</a></li><li><a href="#s8" data-sec="s8">8. 결과</a></li><li><a href="#s9" data-sec="s9">9. 산출물</a></li>
+    </ol>
+  </nav>
+  <div class="sidefoot">
+    <button class="tbtn" id="themeBtn">라이트 / 다크</button>
+    <div>수치·본문·캐시 전문은 저장소 원본에서<br>기계로 실었다. 손으로 옮기지 않았다.</div>
+  </div>
+</aside>
+
+<main id="main">
+
+<section class="sec on" id="demo">
+  <h2>아키텍처 실제 연출</h2>
+  <p class="lede">
+    원문 → 정제 → 분배 → 리프리필 → 보관 → 질의.
+    <b>메인은 상주하고 세부는 그 질문에 필요할 때만 붙는다.</b>
+    아래는 그림이 아니라 <b>실제로 돌린 회차의 산출물</b>이다 — 왼쪽은 그 문서의 메인 캐시 전문,
+    오른쪽은 같이 만들어진 세부 캐시들이다. 질문을 누르면 그때 실제로 무엇을 읽었는지 그대로 재생한다.
+  </p>
+
+  <div class="filters">
+    <span class="lbl">문서</span>
+    <div class="tabs" id="docTabs"></div>
+  </div>
+  <p class="srcline" id="srcLine"></p>
+  <div id="docWarn"></div>
+
+  <ol class="ribbon" id="ribbon"></ol>
+  <p class="stepnote" id="stepNote"></p>
+
+  <div class="qbar">
+    <span class="lbl">질문 — 누르면 그 회차의 라우팅이 재생된다</span>
+    <div class="qrow" id="qRow"></div>
+  </div>
+
+  <div class="stage" id="stage">
+    <svg class="wire" id="wire" aria-hidden="true"></svg>
+    <div class="panel main">
+      <div class="phead">
+        <span class="t">메인 캐시</span>
+        <span class="badge res">상주</span>
+        <span class="tok" id="mainTok"></span>
+      </div>
+      <div class="pbody" id="mainBody"></div>
+    </div>
+    <div></div>
+    <div class="panel detail" id="detPanel">
+      <div class="phead">
+        <span class="t">세부 캐시</span>
+        <span class="badge off" id="detBadge">미상주</span>
+        <span class="tok" id="detTok"></span>
+      </div>
+      <div class="pbody"><div class="dlist" id="detList"></div></div>
+    </div>
+  </div>
+
+  <div class="result idle" id="result"></div>
+</section>
+
+<section class="sec" id="s1"><h2>1. 아이디어</h2>
+<p>기존 캐시 압축은 <strong>숫자를 줄인다</strong> — 저랭크 분해, 양자화, 토큰 축출. 전부 KV 행렬 안의 수치를 건드린다.</p>
+<blockquote>
+<p><strong>우리는 캐시가 나르던 <em>내용</em>을 자연어로 다시 쓴 뒤, 그것을 다시 프리필해 새 캐시를 만들고 원래 캐시를 버린다.</strong></p>
+</blockquote>
+<p>압축이 텐서 연산이 아니라 <strong>재작성</strong>으로 일어난다. 그래서 산출물은 모델이 아니라 <strong>규약(프롬프트)</strong> 이다.</p>
+<table>
+<thead>
+<tr>
+<th>무엇을 보나</th>
+<th>기존 캐시 압축</th>
+<th><strong>REPREFILL</strong></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>층위</strong></td>
+<td><strong>숫자의 잉여</strong> — 행이 겹치거나, 랭크가 낮거나, 비트가 과함</td>
+<td><strong>정보의 잉여</strong> — 같은 사실이 여러 번 진술됨</td>
+</tr>
+<tr>
+<td>무엇을 줄이나</td>
+<td>KV 행렬의 <strong>수치</strong></td>
+<td>캐시가 나르는 <strong>내용</strong></td>
+</tr>
+<tr>
+<td>연산</td>
+<td>축출 · 병합 · 저랭크 · 양자화</td>
+<td><strong>자연어로 다시 쓰기 → 재프리필</strong></td>
+</tr>
+<tr>
+<td>캐시를 무엇으로 보나</td>
+<td>텐서</td>
+<td>자연어로 환원 가능한 내용</td>
+</tr>
+<tr>
+<td>산출물</td>
+<td>알고리즘</td>
+<td><strong>규약(프롬프트)</strong></td>
+</tr>
+</tbody>
+</table>
+<p>두 층위는 서로 다르다.
+<strong>그래서 기존 축출과 곱해질 수 있다.</strong></p>
+<h3>무엇을 버려도 되는가 — 근거 셋</h3>
+<table>
+<thead>
+<tr>
+<th>근거</th>
+<th>뜻</th>
+<th>처분</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>중복 진술</strong></td>
+<td>같은 내용이 여러 번 진술됨</td>
+<td><strong>하나로 정리해 남김</strong></td>
+</tr>
+<tr>
+<td><strong>추론 가능</strong></td>
+<td>원본이 없어도 주변 문맥에서 복원됨</td>
+<td>버림 (복원 원본이 출력에 남아 있을 때만)</td>
+</tr>
+<tr>
+<td><strong>파라메트릭</strong></td>
+<td>모델 가중치가 이미 앎</td>
+<td>버림 — <strong>단 내용만. 주소는 남긴다</strong></td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p>⚠️ <strong>파라메트릭은 이번 프로젝트에서 적용하지 않는다.</strong>
+<em>"모델이 이미 안다"</em> 는 짐작하면 틀리고, 틀리면 정보가 사라져 되찾을 수 없다.
+판정 기준은 하나뿐이다 — <strong>참조 없이 소비 모델이 그 정보를 출력할 수 있는가.</strong>
+그건 재는 것이지 추정하는 것이 아니라서, 프로브가 확인해 준 경우에만 켠다. <strong>기본은 꺼져 있다.</strong></p>
+</blockquote></section><section class="sec" id="s2"><h2>2. 기여 둘</h2>
+<h3>① 리프리필 — 원본 캐시를 버리고 새로 만든다</h3>
+<p>자연어를 경유하는 게 우회로 보이지만, <strong>캐시를 <em>만드는</em> 행위는 기존에 없었다.</strong>
+캐시는 언제나 토큰열을 통과시킨 <em>결과</em>였다. 정제된 캐시를 얻으려면 그것을 출력시킬 입력이 필요하고,
+<strong>그 입력이 자연어다.</strong> 자연어는 우회가 아니라 유일한 경로다.</p>
+<blockquote>
+<h3>그래서 위치 정렬(RoPE) 문제가 없다</h3>
+<p>미리 계산한 KV 블록은 <strong>만들어진 위치에 묶인다.</strong> 그래서 옮겨 붙이려면 정렬이 필요하다.
+<strong>텍스트는 위치가 없다.</strong> 붙이는 그 자리에서 프리필하므로 <strong>옮겨 붙일 것이 애초에 없다.</strong>
+다시 캐시를 생성하는 구조라서 공짜로 얻어지는 장점이다.</p>
+</blockquote>
+<h3>② 메인 캐시 / 세부 캐시 분리</h3>
+<p>정제본을 다시 <strong>메인</strong>과 <strong>세부</strong>로 나눈다.</p>
+<table>
+<thead>
+<tr>
+<th>층</th>
+<th>무엇이 들어가나</th>
+<th>언제 읽나</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>메인 캐시</strong></td>
+<td>흐름과 맥락, 그리고 <strong>무엇이 어디 있는지</strong></td>
+<td><strong>항상</strong> · 상주</td>
+</tr>
+<tr>
+<td><strong>세부 캐시</strong></td>
+<td>그 흐름의 <strong>잎(leaf)</strong> — 값</td>
+<td>그 질문에 필요할 때만</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p><strong>"포인터"는 이 구조의 이름이지 별도의 층이 아니다.</strong> 인덱스 파일도 라우팅 모듈도 없다.
+메인 본문이 <em>무엇이 어디 있는지</em> 를 자연어로 말하고, 소비 모델이 <strong>읽고 판단해</strong> 세부를 가져온다.
+<strong>검색기·임베딩·인덱스가 한 단계도 안 끼어든다.</strong></p>
+</blockquote></section><section class="sec" id="s3"><h2>3. 자연어 층이 하는 일 — 두 개의 인터페이스</h2>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>무엇 사이를 잇나</th>
+<th>왜 공짜인가</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>①</strong></td>
+<td><strong>모델과 모델</strong> — 정제하는 모델 ↔ 소비하는 모델</td>
+<td>이음매가 텐서가 아니라 <strong>문자열</strong>이다. 베이스 모델이 자기 vocab 으로 재토크나이즈해 프리필하는 순간 정제 모델의 토크나이저는 사라진다. ∴ <strong>토크나이저·차원·아키텍처·벤더가 달라도 된다</strong></td>
+</tr>
+<tr>
+<td><strong>②</strong></td>
+<td><strong>메인 캐시와 세부 캐시</strong></td>
+<td>라우팅이 <strong>자연어 문장을 읽고 판단</strong>하는 것이라 별도 임베딩 공간이 필요 없다. 가져온 것이 문서인지 캐시인지 모델에게 보이지 않는다 — 인터페이스가 같은 자연어이기 때문이다</td>
+</tr>
+</tbody>
+</table>
+<p>∴ 이 구조는 소비 모델에게 <strong>새로운 능력을 요구하지 않는다.</strong> 지금 필요한 문서를 찾아 읽는 행위와 같고,
+그 층위만 문서에서 캐시로 옮겨 간 것이다.</p>
+<p><strong>저장은 자연어, 상주는 KV.</strong> 자연어는 저장·인터페이스 형태이고 KV 는 상주 형태다.
+사람이 읽을 수 있고 모델이 바뀌어도 그대로 쓰인다.</p></section><section class="sec" id="s4"><h2>4. 무엇과 다른가 — MoE · RAG</h2>
+<p>셋 다 골격이 같다 — <strong>가진 것은 많되 한 번에 쓰는 것은 일부.</strong> 총량 ≫ 활성량.
+우리 결과표에서 <code>분배 전체(저장)</code> 와 <code>질문 시점 유효</code> 두 행의 <strong>간격이 곧 그 몫</strong>이다.</p>
+<p><strong>갈리는 곳은 라우터다.</strong></p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>MoE</th>
+<th>RAG</th>
+<th><strong>REPREFILL</strong></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>무엇을 아껴 쓰나</strong></td>
+<td>가중치 (모델)</td>
+<td>외부 문서</td>
+<td><strong>컨텍스트 캐시</strong></td>
+</tr>
+<tr>
+<td><strong>라우터</strong></td>
+<td>학습된 게이트</td>
+<td>별도 검색기 (임베딩·BM25·리랭커)</td>
+<td><strong>없다</strong> — 상주 캐시 본문이 말하고 소비 모델이 읽는다</td>
+</tr>
+<tr>
+<td><strong>무엇으로 고르나</strong></td>
+<td>임베딩 유사도</td>
+<td>쿼리 임베딩 유사도</td>
+<td><strong>자연어를 읽고 판단</strong></td>
+</tr>
+<tr>
+<td><strong>별도 학습·인덱스</strong></td>
+<td>게이트 학습 필요</td>
+<td>임베딩 모델·인덱스 필요</td>
+<td><strong>둘 다 불필요</strong></td>
+</tr>
+<tr>
+<td><strong>라우팅 빈도</strong></td>
+<td>매 토큰 · 매 레이어</td>
+<td>질의당</td>
+<td>질의당</td>
+</tr>
+<tr>
+<td><strong>가져온 것의 상태</strong></td>
+<td>가중치</td>
+<td>원문 텍스트 (다시 프리필해야 함)</td>
+<td><strong>이미 정제된 자연어</strong> — 바로 프리필</td>
+</tr>
+<tr>
+<td><strong>맥락</strong></td>
+<td>해당 없음</td>
+<td>청크가 문맥을 잃는다</td>
+<td><strong>맥락은 메인에 남고 잎만 떼어낸다</strong></td>
+</tr>
+</tbody>
+</table>
+<h3>그래서 하는 말</h3>
+<p><strong>MoE 와는 층위가 달라 곱해진다.</strong> MoE 는 모델 축, 이 구조는 데이터 축이다.
+MoE 모델 위에서 그대로 쓸 수 있다 — 기존 토큰 축출과 곱해지는 것과 같은 종류다.</p>
+<p><strong>RAG 와 가장 크게 갈리는 것은 라우터의 정체다.</strong> RAG 는 모델 밖에 검색기를 두지만
+여기서는 <strong>읽고 있는 맥락이 직접 무엇을 더 읽을지 가리킨다.</strong> 그래서 임베딩 공간도,
+인덱스도, 학습도 없다 — 소비 모델이 하는 일은 <strong>지금 필요한 문서를 찾아 읽는 행위와 같고</strong>,
+그 층위만 문서에서 캐시로 옮겨 간 것이다.</p>
+<blockquote>
+<p>굳이 가까운 비유를 찾자면 MoE 보다 <strong>가상 메모리·페이징</strong>이다 —
+상주 세트(메인)와 백킹 스토어(세부), 필요할 때 가져오기. 이름이 "포인터"인 이유다.</p>
+</blockquote></section><section class="sec" id="s5"><h2>5. 파이프라인</h2>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>단계</th>
+<th>무엇을 하나</th>
+<th>다루는 형태</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>1</strong></td>
+<td><strong>정제</strong></td>
+<td>원문을 다시 쓴다</td>
+<td>원문 → <strong>자연어</strong></td>
+</tr>
+<tr>
+<td><strong>2</strong></td>
+<td><strong>분배</strong></td>
+<td>그 자연어를 보고 메인 / 세부로 나눈다</td>
+<td><strong>자연어 → 자연어 파일 여러 개</strong></td>
+</tr>
+<tr>
+<td><strong>3</strong></td>
+<td><strong>리프리필</strong></td>
+<td>나뉜 자연어 파일을 각각 프리필한다</td>
+<td><strong>자연어 → KV</strong></td>
+</tr>
+<tr>
+<td><strong>4</strong></td>
+<td><strong>보관</strong></td>
+<td>메인은 <strong>상주</strong>, 세부는 필요할 때 <strong>로드</strong>. 원본 캐시는 버린다</td>
+<td>KV</td>
+</tr>
+<tr>
+<td><strong>5</strong></td>
+<td><strong>질의</strong></td>
+<td>메인을 읽고 → 자연어로 판단 → 필요한 세부를 읽는다</td>
+<td><strong>자연어 판단 → KV 로드</strong></td>
+</tr>
+</tbody>
+</table></section><section class="sec" id="s6"><h2>6. 무엇이 줄어드나</h2>
+<table>
+<thead>
+<tr>
+<th>무엇이</th>
+<th>어느 단계가 줄이나</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>총 저장량</strong></td>
+<td><strong>정제</strong></td>
+</tr>
+<tr>
+<td><strong>질문당 실제로 읽는 토큰</strong></td>
+<td><strong>분배</strong></td>
+</tr>
+</tbody>
+</table>
+<p>둘은 다른 것을 판다. 상주 토큰은 저장 바이트이자 <strong>매 스텝 어텐션의 대상</strong>이므로,
+읽는 양이 절반이면 <strong>매 토큰이 훑는 양도 절반</strong>이다.</p>
+<p><strong>세부는 상주시키지 않는다.</strong> 읽고 나면 놓아준다 — 로드가 쌓여 상주분이 단일 캐시로 수렴하지 않는다.
+대신 같은 세부가 다시 필요하면 다시 프리필한다.</p>
+<blockquote>
+<p>⚠️ <strong>KV 바이트만 실측했다.</strong> 지연·처리량은 재지 않았다.</p>
+</blockquote></section><section class="sec" id="s7"><h2>7. 오케스트레이션 정책 — 언제 하나</h2>
+<p>정제와 분배는 공짜가 아니다. <strong>짧으면 아무것도 하지 않는다.</strong></p>
+<table>
+<thead>
+<tr>
+<th>단계</th>
+<th>하한</th>
+<th>왜</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>정제</strong></td>
+<td>상주 KV 가 <strong>너무 적을 때</strong></td>
+<td>디코드는 가중치와 KV 를 <strong>한 스텝에 같이 읽는다.</strong> 그 총 읽기량이 메모리 바운드 구간에 들어와 있어야 KV 를 줄인 만큼 빨라진다</td>
+</tr>
+<tr>
+<td><strong>분배</strong></td>
+<td>자기완결 항목이 <strong>2개 미만</strong></td>
+<td>나눌 잎이 없다. 포인터 표시 비용만 든다</td>
+</tr>
+</tbody>
+</table>
+<h3>정제 하한</h3>
+<p>하한은 <strong>HBM 대역폭과 커널 오버헤드가 정하고 배포 스택마다 다르다.</strong> 
+이 절감이 <strong>커널 오버헤드에 묻히지 않는 지점</strong>이 하한이다.
+배치 크기·커널 효율·하드웨어가 그 자리를 정하므로 <strong>각자 스택에서 재야 한다.</strong></p>
+<h3>멀티턴 갱신 — 임계까지 붙이고, 임계에서 통째로 다시 한다</h3>
+<p>대화가 이어지면 새 정보가 계속 쌓인다. 보통의 캐시 압축에서 이건 골칫거리지만
+(압축된 KV 블록에 새 내용을 끼우려면 위치를 맞춰야 한다) <strong>여기서는 저장이 자연어라 문제가 없다.</strong></p>
+<pre><code>t &lt; 임계   새 대화를 메인 캐시 뒤에 **원문 그대로 덧붙인다.** 정제도 분배도 하지 않는다
+t = 임계   ① 메인에 **갱신 시점 표시 줄**을 넣는다
+           ② 메인 + **모든 세부** + 덧붙은 원문을 **통째로 다시 정제**한다
+           ③ 그 결과를 **통째로 다시 분배**한다
+</code></pre>
+<table>
+<thead>
+<tr>
+<th>언제</th>
+<th>왜</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>임계 전</strong></td>
+<td>매번 정제·분배하면 비용이 매번 들고, 조금씩 얹으면 흐름 판단을 그때마다 다시 해야 한다</td>
+</tr>
+<tr>
+<td><strong>임계에서</strong></td>
+<td>전체를 한 번에 보므로 <strong>새 턴이 앞 턴을 재진술한 것까지</strong> 잡힌다. 그리고 <strong>얹기로 불어난 메인이 리셋된다</strong></td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p><strong>옛 값을 덮어쓰지 않는다.</strong> <em>"처음엔 180주였다가 90주가 됐다"</em> 면 <strong>둘 다 남는다.</strong>
+옛 값도 미래에 답이 될 수 있다.</p>
+<p>임계는 자주 오지 않으므로 통째로 다시 하는 비용은 받아들인다.</p>
+</blockquote>
+<p><strong>실측이 이 정책을 지지한다</strong> — 같은 대화를 두 방식으로 갱신했더니</p>
+<table>
+<thead>
+<tr>
+<th>지표</th>
+<th>계속 갱신</th>
+<th><strong>임계에서 통째로 갱신</strong></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>저장</td>
+<td>67.3%</td>
+<td><strong>51.0%</strong></td>
+</tr>
+<tr>
+<td><strong>상주 메인</strong></td>
+<td><strong>26.9%</strong></td>
+<td><strong>19.1%</strong></td>
+</tr>
+<tr>
+<td>표시 비용</td>
+<td>+28.5%</td>
+<td><strong>+10.3%</strong></td>
+</tr>
+</tbody>
+</table>
+<p><strong>계속 갱신</strong> = 새 내용이 올 때마다 메인과 세부에 <strong>각각 얹어 나가는</strong> 방식이다.</p>
+<p><strong>세부로 안 보내서 부푼 것이 아니다</strong> — 메인 +1,397, 세부 +1,402 로 <strong>둘이 나란히 늘었다.</strong>
+넣은 증분은 2,233 토큰인데 캐시는 2,799 토큰 늘었다(<strong>+25.3%</strong>). 같은 값이 양쪽에 쓰인 것이다.</p>
+<p>원인은 <strong>얹기 방식에서는 기존 메인을 줄일 수 없다</strong>는 데 있다. 위에 더하기만 할 수 있고,
+이미 쓴 줄을 다시 접으려면 전체를 다시 봐야 한다.
+그래서 <strong>원문이 1.54배 느는 사이 메인은 2.41배 불었다.</strong></p>
+<p>∴ 정제 시점은 <strong>원문이 얼마나 쌓였는지가 아니라 상주분으로</strong> 판단해야 한다.</p></section><section class="sec" id="s8"><h2>8. 결과</h2>
+<p>성격이 다른 문서 넷에 <strong>같은 프롬프트</strong>로 정제 → 분배 → 라우팅을 끝까지 돌렸다.</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>정책기사</th>
+<th>학술논문</th>
+<th>행정규칙</th>
+<th><strong>챗봇대화</strong>⚠️</th>
+<th><strong>챗봇 갱신후</strong>⚠️</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>정제</td>
+<td>74.4%</td>
+<td>85.4%</td>
+<td><strong>89.9%</strong></td>
+<td><strong>42.0%</strong></td>
+<td><strong>46.2%</strong></td>
+</tr>
+<tr>
+<td>분배 전체(저장)</td>
+<td>78.4%</td>
+<td>97.4%</td>
+<td>96.6%</td>
+<td><strong>55.2%</strong></td>
+<td><strong>51.0%</strong></td>
+</tr>
+<tr>
+<td>표시 비용</td>
+<td>+5.3%</td>
+<td>+14.0%</td>
+<td>+7.5%</td>
+<td><strong>+31.5%</strong></td>
+<td><strong>+10.3%</strong></td>
+</tr>
+<tr>
+<td>세부 파일</td>
+<td>23개(53t)</td>
+<td>7개(314t)</td>
+<td>25개(119t)</td>
+<td><strong>12개(182t)</strong></td>
+<td><strong>14개(202t)</strong></td>
+</tr>
+<tr>
+<td><strong>질문 시점 유효</strong></td>
+<td><strong>44.0%</strong></td>
+<td><strong>68.2%</strong></td>
+<td><strong>72.0%</strong></td>
+<td><strong>22.8%</strong></td>
+<td><strong>26.4%</strong></td>
+</tr>
+</tbody>
+</table>
+<p>전부 <strong>원문 대비</strong>다. <code>질문 시점 유효</code> = 메인(상주) + 그 질문에 실제로 읽은 세부.
+원문 토큰 3,349 / 7,060 / 11,624 / 5,756 / 8,889(누적).</p>
+<table>
+<thead>
+<tr>
+<th>재료</th>
+<th>출처</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>정책기사</td>
+<td>대한민국 정책브리핑 (공공누리)</td>
+</tr>
+<tr>
+<td>학술논문</td>
+<td>arXiv 2607.14400v1 · CLEF 2026 (CC BY 4.0 · 모델 컷오프 이후)</td>
+</tr>
+<tr>
+<td>행정규칙</td>
+<td>고용노동부 고시 제2026-56호 (발령 다음날 · 저작권법 §7)</td>
+</tr>
+<tr>
+<td>챗봇대화 ⚠️</td>
+<td>주식 상담 8턴 + 갱신 6턴 · <strong>허구 종목 · 자체 저작</strong></td>
+</tr>
+</tbody>
+</table>
+<p>⚠️ 챗봇대화 두 열은 <strong>우리가 저작한 재료</strong>다. 잉여의 <em>종류</em>는 실제 상담 봇을 모방했지만
+(면책 문구·기준일 고지·직전 턴 재진술) <strong>턴 수는 우리 선택</strong>이라 대푯값이 아니다.</p>
+<h3>읽는 법</h3>
+<ul>
+<li><strong>질문 시점 읽는 토큰이 22.8 ~ 72.0%.</strong> 네 문서 모두 원문보다 적게 읽고 정답을 냈다</li>
+<li><strong>필요한 세부를 매번 정확히 짚었다.</strong> 25개 중 1개, 23개 중 1개, 14개 중 2개 — <strong>여섯 번 다 정답</strong>이고
+  <strong>필요한 파일을 놓친 적은 한 번도 없다.</strong> 왜 그 파일인지 근거도 스스로 댔다</li>
+<li><strong>틀리는 방향이 한쪽이다.</strong> 갱신후 회차에서는 고른 둘 중 <code>종목정보</code>(130토큰)에 답 값이 없었다.
+  다만 <em>"연간 매출액은 재무수치이니 [종목정보]"</em> 는 <strong>이름표대로 읽으면 옳은 추론</strong>이고,
+  분배가 그 값을 비교 문장에 딸려 <code>[배경]</code> 으로 보낸 것이 어긋남의 원인이다.
+  값 하나가 두 파일에 다 속할 수 있으니 <strong>경계의 모호함은 없앨 수 없다.</strong> 눈여겨볼 것은 그때의 거동이다 —
+  <strong>재시도 라운드 없이 한 번의 판단으로 상위집합을 집어</strong> 답을 완결했다. 대가는 <strong>130토큰(1.5%p)</strong> 이고
+  표의 <code>26.4%</code> 에 이미 <strong>포함돼 있다</strong>(빼면 24.9%)</li>
+<li><strong>값 손실 0.</strong> 정제·분배 양 단계 전부, 기계 전수 대조</li>
+<li><strong>모델이 원래 알아서 맞힌 것이 아니다</strong> — 캐시를 아예 안 주고 질문만 던졌더니 <em>"모른다"</em> 고 답했다.
+  정답은 캐시를 읽어서 나온 것이다. (이걸 확인 안 하면 <strong>세부를 잘못 골라도 정답이 나와</strong> 측정이 무의미해진다)</li>
+<li>⚠️ <strong>저장은 밀집 문서에서 거의 안 줄었다</strong>(논문 97.4% · 행정규칙 96.6%).
+  <strong>이 구조의 타깃은 저장이 아니라 질문당 읽기</strong>다</li>
+</ul>
+<h3>아직 안 잰 것</h3>
+<ul>
+<li><strong>프리필 호출의 고정비용.</strong> 세부를 잘게 나눌수록 호출 횟수가 늘어난다. 호출 한 번에 드는
+  고정비용은 토큰으로 세어지지 않아 <strong>위 표에 안 잡혀 있다.</strong> 파일이 최대 25개까지 나왔으니 작지 않을 수 있다</li>
+<li><strong>지연과 처리량.</strong> 잰 것은 KV 바이트뿐이다. <strong>실제로 얼마나 빨라지는지는 확인하지 않았다</strong></li>
+<li><strong>정제·분배 자체의 비용.</strong> 다시 쓰고 다시 나누는 데 <strong>추가 연산과 메모리가 든다.</strong>
+  응답과 동시에 병렬로 처리되므로 실제 체감 속도에는 영향을 거의 미치지 않지만 공짜는 아니다</li>
+</ul>
+<h3>그래도 값어치가 있을 자리</h3>
+<p>위 비용을 치르고도 남는 곳이 있다고 본다.</p>
+<table>
+<thead>
+<tr>
+<th>어디서</th>
+<th>왜</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>긴 맥락</strong></td>
+<td>맥락이 길수록 상주 KV 가 커지고, 줄인 만큼이 <strong>매 디코드 스텝마다</strong> 회수된다. 한 번 치른 정제 비용이 스텝 수로 나뉜다</td>
+</tr>
+<tr>
+<td><strong>최종적으로 읽는 양</strong></td>
+<td>질문 시점에 실제로 어텐션이 훑는 토큰이 줄어든다 — 이 구조가 파는 것이 이것이다</td>
+</tr>
+<tr>
+<td><strong>엣지와 클라우드의 경계</strong></td>
+<td>정제·분배는 <strong>비동기라 클라우드에서 미리 해둘 수 있고</strong>, 그 결과는 자연어 파일이라 어떤 모델에도 붙는다. <strong>엣지는 작아진 메인만 상주시키고 필요할 때 세부를 붙인다</strong> — 무엇을 클라우드가 계산해 주고 무엇을 단말이 들고 있을지 그 경계를 옮기는 데 쓸 수 있다</td>
+</tr>
+</tbody>
+</table></section><section class="sec" id="s9"><h2>9. 산출물</h2>
+<p>이 아키텍처가 내놓는 것은 모델이 아니라 <strong>규약</strong>이다.</p>
+<table>
+<thead>
+<tr>
+<th>파일</th>
+<th>무엇</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="PROMPT_REFINE.txt">PROMPT_REFINE.txt</a></td>
+<td><strong>정제 프롬프트</strong> — 원문을 다시 쓴다</td>
+</tr>
+<tr>
+<td><a href="PROMPT_DISTRIBUTE.txt">PROMPT_DISTRIBUTE.txt</a></td>
+<td><strong>분배 프롬프트</strong> — 정제본을 메인 / 세부로 나눈다</td>
+</tr>
+</tbody>
+</table>
+<p>둘 다 그대로 모델의 시스템 프롬프트에 넣으면 된다.</p></section>
+
+</main>
+</div>
+
+<script>
+const DATA = {"docs": [{"id": "policy", "label": "정책기사", "source": "대한민국 정책브리핑 (공공누리)", "warn": null, "tokens": {"source": 3349, "refined": 2492, "main": 1402, "detail_all": 1222, "dist_all": 2624}, "ratios": {"refined": 74.4, "dist_all": 78.4, "resident": 41.9}, "kv": {"source": 39.25, "refined": 29.2, "resident": 16.43}, "cost": 5.3, "main": {"tokens": 1402, "lines": [{"t": "영화 할인권부터 단기 육아휴직까지…하반기 달라지는 제도", "m": [], "c": false}, {"t": "AI 정부24 정식 개통…HPV 접종·도시침수 예보", "m": [], "c": false}, {"t": "임금 체불 법정형 상향…암표 근절 조치도 시행", "m": [], "c": false}, {"t": "2026.06.30", "m": [], "c": false}, {"t": "", "m": [], "c": false}, {"t": "[규약] M.D=M월 D일 | x→y=기존 x 에서 변경/확대 y | 각 항목 = 시행일 · 소관 · 내용", "m": [], "c": true}, {"t": "[규약] 항목 줄 끝의 [세부] = 그 줄의 항목명으로 이름 붙은 세부 파일 [세부-\u003c항목명>]. 항목명 = 그 줄에서 시행일 뒤 '·' 다음부터 [세부] 앞까지의 표기 그대로.", "m": [{"s": 13, "e": 17, "t": "[세부]", "n": null}, {"s": 82, "e": 86, "t": "[세부]", "n": null}], "c": true}, {"t": "", "m": [], "c": false}, {"t": "[개요] 2026년 하반기부터 소상공인 지원, 돌봄·육아, 교통·디지털 서비스, 안전·건강, 소비자 보호, 의무·처벌 제도 등이 분야별로 달라진다. 30일 발간 '2026년 하반기부터 이렇게 달라집니다' — 국민 생활과 맞닿은 대표 정책 40개(40선)를 혜택·제도 유형별로 정리: 현금·할인·지원금·감면 / 앱·디지털·절차 간소화 / 예방·접종·안전망 / 소비자 권리와 공정 강화 / 의무·처벌·신고. 월별 순차 시행 목록은 아래 각 분야 항목의 시행일과 동일.", "m": [], "c": false}, {"t": "", "m": [], "c": false}, {"t": "[1 현금·할인·지원금·감면] 대상 집중: 소상공인·한부모가족·노동자·제대군인·장애인/유공자·다자녀가구·군 간부. 7월 이후 정책은 지원 한도와 대상을 넓히는 흐름. 지난 5월부터 시행한 정책은 영화 관람료 할인, 자본시장 신고 보상처럼 시민·시장 참여를 직접 유도.", "m": [], "c": false}, {"t": "7월 · 소상공인 노란우산공제 납입한도 확대 [세부]", "m": [{"s": 25, "e": 29, "t": "[세부]", "n": "세부-소상공인 노란우산공제 납입한도 확대"}], "c": false}, {"t": "7월 · 폐업 소상공인 정책자금 상환부담 완화 [세부]", "m": [{"s": 26, "e": 30, "t": "[세부]", "n": "세부-폐업 소상공인 정책자금 상환부담 완화"}], "c": false}, {"t": "8.20 · 국가보훈부 제대군인 무료 법률구조 지원대상 확대 [세부]", "m": [{"s": 34, "e": 38, "t": "[세부]", "n": "세부-국가보훈부 제대군인 무료 법률구조 지원대상 확대"}], "c": false}, {"t": "8.4 · 국방부 군간부 단기복무장려금 지급 대상 확대 [세부]", "m": [{"s": 31, "e": 35, "t": "[세부]", "n": "세부-국방부 군간부 단기복무장려금 지급 대상 확대"}], "c": false}, {"t": "8.20 · 고용노동부 단기 육아휴직 신설 [세부]", "m": [{"s": 24, "e": 28, "t": "[세부]", "n": "세부-고용노동부 단기 육아휴직 신설"}], "c": false}, {"t": "9.18 · 배우자 휴가·휴직 확대 [세부]", "m": [{"s": 20, "e": 24, "t": "[세부]", "n": "세부-배우자 휴가·휴직 확대"}], "c": false}, {"t": "10.29 · 성평등가족부 한부모가족 미성년 자녀 양육비 선지급 소득기준 폐지 [세부]", "m": [{"s": 44, "e": 48, "t": "[세부]", "n": "세부-성평등가족부 한부모가족 미성년 자녀 양육비 선지급 소득기준 폐지"}], "c": false}, {"t": "11.27 · 난임치료휴가급여 지원 기간 4일로 확대 [세부]", "m": [{"s": 30, "e": 34, "t": "[세부]", "n": "세부-난임치료휴가급여 지원 기간 4일로 확대"}], "c": false}, {"t": "하반기 · 국토교통부 고속도로 통행료 감면 [세부]", "m": [{"s": 24, "e": 28, "t": "[세부]", "n": "세부-국토교통부 고속도로 통행료 감면"}], "c": false}, {"t": "", "m": [], "c": false}, {"t": "[2 앱·디지털·절차 간소화] 행정·재난정보·교통·통신·관세·생활 민원 절차를 디지털·통합 방식으로 전환.", "m": [], "c": false}, {"t": "7.1 · 관세청 면세품 교환 절차 간편화 [세부]", "m": [{"s": 24, "e": 28, "t": "[세부]", "n": "세부-관세청 면세품 교환 절차 간편화"}], "c": false}, {"t": "8월 · 국토부 고속철도 통합 앱 출시 [세부]", "m": [{"s": 22, "e": 26, "t": "[세부]", "n": "세부-국토부 고속철도 통합 앱 출시"}], "c": false}, {"t": "9월 · 기후에너지환경부 층간소음 챗봇 상담안내 서비스 도입 [세부]", "m": [{"s": 34, "e": 38, "t": "[세부]", "n": "세부-기후에너지환경부 층간소음 챗봇 상담안내 서비스 도입"}], "c": false}, {"t": "10월 · 개선한 대국민 재난문자 서비스 제공 [세부]", "m": [{"s": 26, "e": 30, "t": "[세부]", "n": "세부-개선한 대국민 재난문자 서비스 제공"}], "c": false}, {"t": "10월 · 철도 승차권 예매 기간 열차 출발 1개월 전→2개월 전 확대 [세부]", "m": [{"s": 40, "e": 44, "t": "[세부]", "n": "세부-철도 승차권 예매 기간 열차 출발 1개월 전→2개월 전 확대"}], "c": false}, {"t": "12월 · 행정안전부 AI 정부24 정식 개통 [세부]", "m": [{"s": 26, "e": 30, "t": "[세부]", "n": "세부-행정안전부 AI 정부24 정식 개통"}], "c": false}, {"t": "", "m": [], "c": false}, {"t": "[3 예방·접종·안전망] 대표 정책: 예방접종, 재난 예보, 기상 서비스, 농업 현장 안전관리.", "m": [], "c": false}, {"t": "11.12 · 기상청 디지털 중기예보 전면 시행 [세부]", "m": [{"s": 27, "e": 31, "t": "[세부]", "n": "세부-기상청 디지털 중기예보 전면 시행"}], "c": false}, {"t": "", "m": [], "c": false}, {"t": "[4 소비자 권리와 공정 강화]", "m": [], "c": false}, {"t": "7월 · 성평등부 공공생리대 지원 시범사업 [세부]", "m": [{"s": 24, "e": 28, "t": "[세부]", "n": "세부-성평등부 공공생리대 지원 시범사업"}], "c": false}, {"t": "7월 · 농림축산식품부 임산부 친환경농산물 꾸러미 지원 [세부]", "m": [{"s": 31, "e": 35, "t": "[세부]", "n": "세부-농림축산식품부 임산부 친환경농산물 꾸러미 지원"}], "c": false}, {"t": "11월 · 지식재산처 위조상품 감정지원 체계 구축(위조 우려 상품 소비자 대상) [세부]", "m": [{"s": 45, "e": 49, "t": "[세부]", "n": "세부-지식재산처 위조상품 감정지원 체계 구축(위조 우려 상품 소비자 대상)"}], "c": false}, {"t": "", "m": [], "c": false}, {"t": "[5 의무·처벌·신고] 직접 적용 대상: 사업주와 업체, 플랫폼 사업자, 공무원 채용예정자, 체납자, CEO 등. 7월 이후 국세외수입 체납관리단, 암표 근절, 개인정보 보호 책임, 임금 체불 법정형, 담배 유해성분, 원산지 고지, 주류 경고문구 등 의무·제재가 7월~11월 순차 적용.", "m": [], "c": false}, {"t": "7.1 · 국세청 국세외수입 체납관리단 운영 [세부]", "m": [{"s": 25, "e": 29, "t": "[세부]", "n": "세부-국세청 국세외수입 체납관리단 운영"}], "c": false}, {"t": "8.28 · 문체부 공연 및 스포츠경기 암표 근절 법적 조치 강화 [세부]", "m": [{"s": 37, "e": 41, "t": "[세부]", "n": "세부-문체부 공연 및 스포츠경기 암표 근절 법적 조치 강화"}], "c": false}, {"t": "9.11 · 개인정보보호위원회 CEO의 개인정보 처리·보호 총괄 관리의무 법제화 [세부]", "m": [{"s": 45, "e": 49, "t": "[세부]", "n": "세부-개인정보보호위원회 CEO의 개인정보 처리·보호 총괄 관리의무 법제화"}], "c": false}, {"t": "10월 · 임금 체불범죄 법정형 상향 / 담배 유해성분 검사·정보 공개 시행 / 통신판매중개업자에게 원산지 표시제도 고지 의무 부과.", "m": [], "c": false}, {"t": "11.9 · 보건복지부 주류용기·주류광고 경고문구 및 경고그림 표시 강화 [세부]", "m": [{"s": 41, "e": 45, "t": "[세부]", "n": "세부-보건복지부 주류용기·주류광고 경고문구 및 경고그림 표시 강화"}], "c": false}, {"t": "", "m": [], "c": false}]}, "details": [{"name": "세부-소상공인 노란우산공제 납입한도 확대", "tokens": 56, "text": "개인 상황에 따라 자유롭게 납입하도록 분기별 한도 조정, 연 1800만 원까지 납입 가능. 소기업·소상공인 자산형성 기반·사회안전망 강화.\n"}, {"name": "세부-폐업 소상공인 정책자금 상환부담 완화", "tokens": 69, "text": "2023년 이후 소상공인 정책자금 직접대출을 받은 뒤 2025년 폐업한 소상공인이 취업에 성공하면 상환연장 지원 대상에 포함, 취업 후 1년 이상 근속하면 금리감면.\n"}, {"name": "세부-국가보훈부 제대군인 무료 법률구조 지원대상 확대", "tokens": 49, "text": "우선지원 의무복무 제대군인·조국 수호 장병까지 포함, 법률지원 사각지대 축소, 국가를 위해 헌신한 제대군인 실질 지원 강화.\n"}, {"name": "세부-국방부 군간부 단기복무장려금 지급 대상 확대", "tokens": 59, "text": "장교는 졸업 후 학사사관후보생으로 선발된 사람까지, 부사관은 현역부사관·민간부사관후보생·학군부사관후보생까지. 간부 확보 지원.\n"}, {"name": "세부-고용노동부 단기 육아휴직 신설", "tokens": 57, "text": "자녀의 방학, 휴원·휴교, 질병 등 단기간 돌봄 필요 시 연 1회 1주 또는 2주 단위 사용. 긴급 돌봄 상황에서 노동자의 일·가정 양립.\n"}, {"name": "세부-배우자 휴가·휴직 확대", "tokens": 63, "text": "배우자 유산·사산휴가와 급여 지원 신설, 배우자의 임신 중에도 배우자 출산전후휴가·육아휴직 사용 가능. 임신부터 출산·육아까지 남성 돌봄 참여 확대.\n"}, {"name": "세부-성평등가족부 한부모가족 미성년 자녀 양육비 선지급 소득기준 폐지", "tokens": 28, "text": "양육비 미수령 한부모가족 지원 접근성 확대, 자녀 양육 공백 축소.\n"}, {"name": "세부-난임치료휴가급여 지원 기간 4일로 확대", "tokens": 26, "text": "지원요건 개선, 치료 과정의 휴가·소득 부담 축소.\n"}, {"name": "세부-국토교통부 고속도로 통행료 감면", "tokens": 47, "text": "장애인·유공자와 같은 세대원이 장기 임차·대여한 차량은 통행료 50% 할인, 다자녀가구는 주말 통행료 감면.\n"}, {"name": "세부-관세청 면세품 교환 절차 간편화", "tokens": 73, "text": "면세범위 800달러 이내. 출국 때 산 면세품을 입국 뒤 같은 물품으로 교환할 때 면세범위 이내라면 입국 시 자진신고·재출국 절차 없이 국내에서 택배·우편 교환 가능.\n"}, {"name": "세부-국토부 고속철도 통합 앱 출시", "tokens": 30, "text": "코레일톡·SRT 앱에서 각각 예매→통합 앱에서 전 열차 통합 예·발매.\n"}, {"name": "세부-기후에너지환경부 층간소음 챗봇 상담안내 서비스 도입", "tokens": 44, "text": "24시간 맞춤형 층간소음 정보 제공 비대면 갈등상담 체계, 민원인이 초기 단계에서 정확한 정보·조치 안내 수령.\n"}, {"name": "세부-개선한 대국민 재난문자 서비스 제공", "tokens": 50, "text": "글자 수 제약으로 구체적 행동요령 전달이 어렵던 문제 보완해 글자 수 확대, 중복 검토기능 도입으로 과다·중복 수신 부담 축소.\n"}, {"name": "세부-철도 승차권 예매 기간 열차 출발 1개월 전→2개월 전 확대", "tokens": 34, "text": "항공권·숙박시설 예매 주기에 맞춰 시점을 앞당겨 여행·행사·단체 이동 준비 편의 제고.\n"}, {"name": "세부-행정안전부 AI 정부24 정식 개통", "tokens": 80, "text": "키워드 기반 통합검색 중심→일상용어 질의를 이해하는 AI 지능형 검색, AI 에이전트 기반 민원서류 발급, 민원서류 분석·대화형 질의응답, 디지털 취약계층용 음성 대화 서비스·전용 화면.\n"}, {"name": "세부-기상청 디지털 중기예보 전면 시행", "tokens": 121, "text": "강수 유무 중심 단정예보→강수 가능성 정보 제공, 특별·광역시도 단위 예보→5km 격자 단위 상세 예보, +6~8일 예보 3시간 단위·+9~11일 예보 6시간 단위 세분화, 텍스트 중심 체계→그래픽 중심 서비스. 예보 구역·시간 간격이 촘촘해지면 중기 일정·재난 대비 날씨 정보를 더 구체적으로 확인 가능.\n"}, {"name": "세부-성평등부 공공생리대 지원 시범사업", "tokens": 27, "text": "공공시설에 공공생리대 지급기 상시 비치, 필요한 순간 누구나 부담 없이 이용.\n"}, {"name": "세부-농림축산식품부 임산부 친환경농산물 꾸러미 지원", "tokens": 70, "text": "2025년 1월 1일 이후 출산한 산모·임산부 대상 24만 원 상당 지원, 자부담 4만 8000원 포함. 건강한 먹거리 제공·친환경농산물 안정적 소비처 확보.\n"}, {"name": "세부-지식재산처 위조상품 감정지원 체계 구축(위조 우려 상품 소비자 대상)", "tokens": 49, "text": "AI 활용 감정지원 보고서를 상표권자가 확인해 감정의견 제공, 온라인 플랫폼은 이를 바탕으로 환불·유통차단 등 후속 조치.\n"}, {"name": "세부-국세청 국세외수입 체납관리단 운영", "tokens": 32, "text": "신설을 통해 체납자별 상황에 맞춘 징수체계 구축, 납부 안내·관리 강화.\n"}, {"name": "세부-문체부 공연 및 스포츠경기 암표 근절 법적 조치 강화", "tokens": 70, "text": "매크로 이용 여부와 관계없이 모든 암표 부정거래행위 금지, 신고 접수·처리 기관 지정, 확인자료 제출명령, 판매금액 50배 이하 과징금, 신고 포상금 지급 근거 마련.\n"}, {"name": "세부-개인정보보호위원회 CEO의 개인정보 처리·보호 총괄 관리의무 법제화", "tokens": 36, "text": "기업·기관 대표자에게 최종 책임 부여, 규제 준수 차원을 넘어 기업 신뢰·지속 가능한 성장 문제로 관리.\n"}, {"name": "세부-보건복지부 주류용기·주류광고 경고문구 및 경고그림 표시 강화", "tokens": 52, "text": "음주운전 금지 문구·그림 추가, 경고그림 표시 근거 마련, 경고문구 글자 크기 확대. 과음·음주운전 위험 경각심 제고.\n"}], "stats": {"n_detail": 23, "main_tokens": 1402, "detail_tokens_total": 1222, "detail_tokens_mean": 53.1, "detail_tokens_min": 26, "detail_tokens_max": 121, "all_tokens": 2624}, "questions": [{"q": "임산부 친환경농산물 꾸러미는 얼마를 지원받고 자부담은 얼마야?", "picked": ["세부-농림축산식품부 임산부 친환경농산물 꾸러미 지원"], "why": "메인 본문에는 해당 항목의 시행일·소관·명칭만 있고 지원 금액과 자부담 액수가 없어, 그 줄의 항목명 세부 캐시를 읽어야 한다.", "answer": "24만 원 상당을 지원받으며, 이 중 자부담은 4만 8000원입니다. (2025년 1월 1일 이후 출산한 산모·임산부 대상, 7월 시행)", "gold": "24만 원 상당 · 자부담 4만 8000원", "verdict": "정답", "no_context": null, "control": "UNKNOWN (지원 금액·자부담은 [세부] 파일에 있어 확인 불가)", "picked_tokens": 70, "eff_tokens": 1472, "eff_pct": 44.0, "note": null, "kind": "한계", "anchors": [{"name": "세부-농림축산식품부 임산부 친환경농산물 꾸러미 지원", "line": 34, "mark": 0}]}]}, {"id": "paper", "label": "학술논문", "source": "arXiv 2607.14400v1 · CLEF 2026 (CC BY 4.0 · 모델 컷오프 이후)", "warn": null, "tokens": {"source": 7060, "refined": 6031, "main": 4674, "detail_all": 2200, "dist_all": 6874}, "ratios": {"refined": 85.4, "dist_all": 97.4, "resident": 66.2}, "kv": {"source": 82.73, "refined": 70.68, "resident": 54.77}, "cost": 14.0, "main": {"tokens": 4674, "lines": [{"t": "[NOTATION]", "m": [], "c": true}, {"t": "Metric tables: every row's values follow the column order declared once in the table header line. \"—\" = system not evaluated on that metric.", "m": [], "c": false}, {"t": "Metric row label = appendix form; body-table form given in ( ) where the source used a different form.", "m": [], "c": false}, {"t": "Citation keys kept verbatim as [key]. Several math symbols were stripped in the source; marked \"(symbol stripped in source)\".", "m": [], "c": false}, {"t": "", "m": [], "c": false}, {"t": "[META]", "m": [], "c": false}, {"t": "CLEF 2026: Conference and Labs of the Evaluation Forum, 2026-09-21 to 2026-09-24, Jena, Germany. Paper year (2026).", "m": [], "c": false}, {"t": "Copyright for this paper by its authors. Use permitted under Creative Commons License Attribution 4.0 International (CC BY 4.0).", "m": [], "c": false}, {"t": "Title: DS@GT ARC at LongEval: Citation Integrity and Factual Grounding in Scientific QA", "m": [], "c": false}, {"t": "Georgia Institute of Technology, North Ave NW, Atlanta, GA 30332. Both authors corresponding:", "m": [], "c": false}, {"t": "- Brandon Michaels, ORCID 0009-0008-2056-6884, bmichaels6@gatech.edu", "m": [], "c": false}, {"t": "- Brendon Johnson, ORCID 0009-0002-1777-2456, bjohnson436@gatech.edu", "m": [], "c": false}, {"t": "", "m": [], "c": false}, {"t": "[ABSTRACT]", "m": [], "c": false}, {"t": "DS@GT ARC's submission to CLEF 2026 LongEval Task 4 on Retrieval-Augmented Generation (RAG). Examines a divergence between traditional natural language evaluation metrics and citation integrity as applied to RAG QA systems. Evaluates a corrective pipeline using Corrective RAG (CRAG) and CiteFix against baseline and frontier model benchmark RAG QA scores. Frontier models maximized answer relevance and fluency scores, but our RAGAs LLM-as-judge diagnostics indicate frontier models would correctly identify relevant documents without using their context in answer generation. Conversely, by filtering chunks pre-generation and enforcing strict entailment of generated claims to the cited material post-generation, our corrective pipeline marginally improved citation faithfulness and answer grounding. We propose that evaluation of trustworthy RAG QA requires metrics that reward strict answer grounding.", "m": [], "c": false}, {"t": "keywords: Retrieval-Augmented Generation; Scientific Question Answering; Large Language Models; Attributed Text Generation", "m": [], "c": false}, {"t": "", "m": [], "c": false}, {"t": "[1 Introduction]", "m": [], "c": false}, {"t": "Scientific knowledge evolves through continual research and publication of new papers that update previous empirical results, propose novel approaches, or replace old knowledge altogether — consequential for RAG-related QA: with rapid LLM developments, information can become quickly outdated or even a complete distraction during question answering or information retrieval [lewis2020rag]. RAG is intuitive for scientific questions since it bases output on source documents instead of model memory, yet it has ample retrieval-related mistakes prompting for stronger grounded QA: retrieval of irrelevant documents or paragraphs, missing evidence, wrong document citations, retrieval of inaccurate or outdated information. Particularly relevant in science, where an answer must be factually grounded, empirically backed by research documents, accurate and currently relevant, and the evidence used must justify the claims.", "m": [], "c": false}, {"t": "The 2026 LongEval-RAG task [lncs_overview_longeval_2026, ceur_overview_longeval_2026] considers this over temporally evolving scientific documents from the Connecting Repositories (CORE) scientific literature corpus [Knoth2023-zi]. For every query, organizers present a set of ten documents and require participants to output a natural-language answer supported by references to the documents used. This narrows the candidate set before answer generation, but organizers included irrelevant documents which still required evidence-related filtering; even within a chunked document not all information is relevant or highly relevant, which keeps the task meaningful in both natural language answer quality and faithfulness.", "m": [], "c": false}, {"t": "Because documents are pre-retrieved per query, the architecture focuses on post-retrieval optimization of grounded answer generation. Against distractor documents we compare a hybrid chunk retrieval baseline vs a strict corrective pipeline: CRAG [yan2024crag] filters chunks prior to generation; CiteFix [maheshwari2025citefix] enforces strict claim attribution by pruning ungrounded citations post-generation. Apart from the automated pipelines we also examine two manually curated runs using state-of-the-art frontier models (GPT-5.5 Thinking and Claude Opus 4.7 Thinking); these achieved high scores on standard NLP metrics (ROUGE, BERT) and LLM-judged answer relevancy, yet our RAGAs-based faithfulness evaluation reveals these same models often fail to properly ground answers in cited materials.", "m": [], "c": false}, {"t": "", "m": [], "c": false}, {"t": "[2 Related Work]", "m": [], "c": false}, {"t": "Standard RAG frameworks treat source documents as static repositories of knowledge, but document corpora often exhibit longitudinal context drift where knowledge mutates over time [keller2024eval], challenging long-context extraction since temporal misalignment can contaminate retrieval. Traditional RAG operates under a naive assumption that retrieved contexts are inherently trustworthy, leaving generators vulnerable to retrieval failures. CRAG introduced an active, intermediate evaluation layer that attempts to sanitize the retrieved context before generation [yan2024crag]. Strict attribution of sources is another challenge: at generation an LLM can generate coherent text using supplied context but include ungrounded statements or inaccurate citations [liu2023evaluating]. Recent efforts in trustworthy RAG focus on post-hoc citation mapping to force explicit citation of generated claims [gao-etal-2023-enabling, maheshwari2025citefix].", "m": [], "c": false}, {"t": "", "m": [], "c": false}, {"t": "[3.1 CORE Scientific Document Corpus]", "m": [], "c": false}, {"t": "LongEval 2026 Task 4 (LongEval-RAG) dataset provides a textual query alongside 10 pre-retrieved document IDs from the CORE corpus, meant to represent the knowledge boundary for generating the answer. This constraint tests a RAG system's ability to filter evidence, isolate distractors, and produce extractive answers. For each document ID: paper title, abstract, and full text fields are available.", "m": [], "c": false}, {"t": "Outputs must align with a strict JSONL schema: systems ingest a JSON containing the query and list of pre-retrieved document IDs; the pipeline appends an answer including the generated response and cited documents in the pre-retrieved array. Figure 1 (expected JSONL schema for LongEval-RAG submissions) [세부-제출 JSONL 예시].", "m": [{"s": 304, "e": 320, "t": "[세부-제출 JSONL 예시]", "n": "세부-제출 JSONL 예시"}], "c": false}, {"t": "", "m": [], "c": false}, {"t": "[3.2 Candidate Processing and Retrieval]", "m": [], "c": false}, {"t": "Candidates are organizer-provided, so no global corpus retriever is built; the architecture ranks and sanitizes the provided payload. Documents are first segmented into overlapping semantic chunks, each enriched with its parent document's metadata to enable proper attribution. A second-stage retrieval over these chunks uses a hybrid retriever combining BM25 and BGE (bge-base-en-v1.5) dense vector embeddings to rank chunks. The top chunks (cutoff count symbol stripped in source) based on the input query are fed into the generator's context window.", "m": [], "c": false}, {"t": "", "m": [], "c": false}, {"t": "[3.3 Answer Generation and Post-Hoc Correction] — three generative pipelines evaluated against the LongEval Organizers' naive baseline.", "m": [], "c": false}, {"t": "3.3.1 DS@GT Hybrid Baseline: standard RAG implementation. Top chunks retrieved by the BM25+BGE hybrid ranker are injected directly into the prompt for the Gemma-4-31B instruction-tuned model, which synthesizes an initial answer and outputs an array of cited document indices.", "m": [], "c": false}, {"t": "3.3.2 Corrective RAG and CiteFix (primary research pipeline; active interventions added to the Hybrid Baseline):", "m": [], "c": false}, {"t": " 1. Pre-Generation (CRAG): a lightweight cross-encoder (cross-encoder/ms-marco-MiniLM-L-6-v2) evaluates retrieved chunks; chunks below the entailment threshold are dropped from the supplied context.", "m": [], "c": false}, {"t": " 2. Post-Generation (CiteFix): parses generated claims against cited document chunks; citations lacking entailment to support the generated claims are pruned. Figure 2 = \"CiteFix Evidence Validation Repair Pipeline\" steps.", "m": [], "c": false}, {"t": "3.3.3 Frontier Model Benchmarks: to establish an upper bound on long-context parametric reasoning, scoring and chunking are bypassed entirely; ChatGPT-5.5 Thinking and Claude Opus 4.7 Thinking are prompted to synthesize answers directly from the raw text of the 10 candidate documents.", "m": [], "c": false}, {"t": "", "m": [], "c": false}, {"t": "[3.4 Reference-Free RAGAs Evaluation]", "m": [], "c": false}, {"t": "Absent a gold QA set with ground truth answers in the development phase, an LLM-as-judge setup (Claude Sonnet 4.6) via the RAGAs framework [es-etal-2024-ragas] computed faithfulness and relevancy using multi-step prompting algorithms with the judge LLM.", "m": [], "c": false}, {"t": "Figure 3 (RAGAs Faithfulness workflows): Generated Answer -> Extracted Claims -> (a) Judge LLM (Global NLI) against All 10 Retrieved Documents -> Global Faithfulness Score; (b) Filter for Cited Documents in Answer -> Cited Documents Only -> Judge LLM (Citations Only) -> Citation Faithfulness Score.", "m": [], "c": false}, {"t": "- Global Faithfulness: factual consistency of the generated response against the 10 pre-retrieved documents. The answer is decomposed into discrete, standalone claims; the judge LLM (Claude Sonnet 4.6) decides if claims are grounded within the entirety of the supplied documents. Final metric = ratio of grounded statements to total statements in answers on the evaluation set. Verifying against the whole 10-document context array penalizes ungrounded statements.", "m": [], "c": false}, {"t": "- Citation Faithfulness: isolates the documents claimed to have been used at generation; answer claims are evaluated against only cited documents, forcing the judge to verify claims strictly against documents cited in the answer. Large gaps between Global and Citation Faithfulness reveal a failure mode where grounded answers are produced but falsify or otherwise hallucinate the citation.", "m": [], "c": false}, {"t": "- Answer Relevancy (Figure 4): quantifies completeness of the answer with respect to the query. Rather than semantic similarity of question and answer, only the generated answer is given to the judge model, which produces counterfactual queries (Hypothetical Query 1, Hypothetical Query ... — index stripped in source); similarity of generated queries to the original query, via embedding cosine similarity, scores each answer. Rewards query-aligned answers but systematically penalizes safe abstention when the generator receives no context or context not relevant to the original query.", "m": [], "c": false}, {"t": "", "m": [], "c": false}, {"t": "[3.5 Official Task Evaluation Metrics]", "m": [], "c": false}, {"t": "Besides our own suite, the LongEval Organizers evaluated submissions against a hidden gold set of answers. Headline metrics: ROUGE measures structural lexical overlap via longest common subsequence (LCS) and n-gram intersection between submitted and gold answers; BERT Score evaluates semantic equivalence via cosine similarity of token embeddings. Higher scores indicate the generated answer shares higher lexical or semantic similarity with the gold answer.", "m": [], "c": false}, {"t": "Citation precision (set symbols for cited documents, user query, and gold-relevant documents stripped in source): ratio of correctly cited relevant documents to the total number of cited documents, averaged over all queries. Organizers also provide detailed metrics covering natural language coherency, consistency, and clarity, plus other retrieval heuristics measuring the prompt in comparison to the input query; the full list including additional IR axiom metrics is in the Appendix.", "m": [], "c": false}, {"t": "", "m": [], "c": false}, {"t": "[4 Results — all official and RAGAs metrics, one table]", "m": [], "c": false}, {"t": "Columns for every row below: (LongEval Lab) Naive Baseline | (DS@GT) Hybrid Baseline | CRAG+CiteFix | GPT-5.5 Thinking | Claude Opus 4.7 Thinking", "m": [], "c": false}, {"t": "Source tables: T1=Table 1, T2=Table 2, T3=Table 3, T4=Table 4, T5=Table 5, T6=Table 6.", "m": [], "c": false}, {"t": "", "m": [], "c": false}, {"t": "#gold-answer similarity [T2; T1 also carried two unlabeled headline columns] — rows R-1 (ROUGE, word one-grams), R-2 (ROUGE, bi-grams), R-L (ROUGE, longest overlapping phrase; identical to T1 unlabeled column 1), BERT-P (BERT precision, all queries), BERT-R (BERT recall, all queries), T1 unlabeled column 2 (BERT-side headline score; label stripped in source) [세부-골드답안 유사도 수치]", "m": [{"s": 361, "e": 377, "t": "[세부-골드답안 유사도 수치]", "n": "세부-골드답안 유사도 수치"}], "c": false}, {"t": "", "m": [], "c": false}, {"t": "#citation / nugget [T1] — rows Citation Precision, Nugget Cov. [세부-인용정밀도-너깃 수치]", "m": [{"s": 63, "e": 79, "t": "[세부-인용정밀도-너깃 수치]", "n": "세부-인용정밀도-너깃 수치"}], "c": false}, {"t": "", "m": [], "c": false}, {"t": "#TREC-AutoJudge IR axioms [T5; GEN-TFC1 also appears in T1 labeled \"TFC1\", same values] — GEN-* evaluate proximity properties of generated answers with respect to the input query; higher values indicate better results — rows GEN-TFC1 (T1: TFC1), GEN-LNC1, GEN-REG, GEN-AND, GEN-DIV, GEN-STMC1, GEN-STMC2, GEN-PROX1, GEN-PROX2, GEN-PROX3, GEN-PROX4, GEN-PROX5, GEN-ASL, GEN-TF-LNC [세부-IR공리 수치]", "m": [{"s": 380, "e": 392, "t": "[세부-IR공리 수치]", "n": "세부-IR공리 수치"}], "c": false}, {"t": "", "m": [], "c": false}, {"t": "#TREC-AutoJudge coherence / coverage / consistency / correction / clarity [T6; COH1-0.75, COH2-0.75, CLAR1-0.5, CLAR2-0.5 also appear in T3 as COH1, COH2, CLAR1, CLAR2] — rows COH1-0.75 (T3: COH1), COH2-0.75 (T3: COH2), COV1-SE-0.5, COV2-SE-0.5, COV3-SE-0.5, CONS3-0.5, CORR1-0.75, CLAR1-0.5 (T3: CLAR1), CLAR2-0.5 (T3: CLAR2) [세부-일관성명료성 수치]", "m": [{"s": 327, "e": 341, "t": "[세부-일관성명료성 수치]", "n": "세부-일관성명료성 수치"}], "c": false}, {"t": "", "m": [], "c": false}, {"t": "#RAGAs reference-free diagnostics [T4; Naive Baseline not evaluated] — rows Global Faithfulness, Citation Faithfulness, Answer Relevancy [세부-RAGAs 수치]", "m": [{"s": 137, "e": 150, "t": "[세부-RAGAs 수치]", "n": "세부-RAGAs 수치"}], "c": false}, {"t": "", "m": [], "c": false}, {"t": "[4.1 Official Task Metrics — reading of the table]", "m": [], "c": false}, {"t": "The frontier model runs establish a high upper bound for natural language generation; manual systems provide an approximate upper bound for natural language metrics. GPT-5.5 achieved the highest similarity scores (the two T1 headline columns). Claude Opus 4.7 achieved a perfect Citation Precision and the highest Nugget Coverage — best performance in selecting the correct document IDs from each pre-retrieved set. Our hybrid chunk reranking benchmark significantly outperformed the Organizer's Naive Baseline across all lexical and semantic metrics. Our corrective intervention pipeline CRAG+CiteFix dropped in both ROUGE and BERT scores compared to the hybrid baseline — an artifact of the abstention behavior which suppresses generation of ungrounded text.", "m": [], "c": false}, {"t": "T2 caption claim: GPT-5.5 manual outputs achieve the strongest four scores, while Claude Opus 4.7 Thinking manual outputs achieve the highest one score (the specific metric names were stripped in the source).", "m": [], "c": false}, {"t": "T3 (secondary metrics on sentence-level consistency and clarity based on TREC-AutoJudge Axioms [merker2025axioms, farzi2026autojudge]): Claude Opus 4.7 produced the most coherent output and is strongly preferred on sentence-level coherency and clarity (COH1 and CLAR2). GPT-5.5 Thinking and the CRAG+CiteFix approach lead on secondary metrics (CLAR1 and COH2 respectively). The organizer Naive Baseline is weak on coherence but scored well on CLAR2, indicating high readability despite poor accuracy.", "m": [], "c": false}, {"t": "", "m": [], "c": false}, {"t": "[4.2 RAGAs Evaluation Metrics]", "m": [], "c": false}, {"t": "These metrics evaluate strictly for attribution integrity and grounding of claims rather than lexical overlap or semantic similarity. CRAG+CiteFix maximized faithfulness to the supplied context, leading on both Global and Citation Faithfulness, i.e. maximizing factual grounding and attribution accuracy. Conversely, faithfulness scores for both GPT-5.5 Thinking and Claude Opus 4.7 Thinking collapsed despite producing answers highly relevant to the queries — a failure mode where models output highly relevant answers without extracting their claims from the cited documents; the frontier models prioritize answer relevancy at the expense of strict citation integrity.", "m": [], "c": false}, {"t": "", "m": [], "c": false}, {"t": "[5 Discussion]", "m": [], "c": false}, {"t": "A tradeoff appears between several performance metrics and our RAGAs faithfulness/citation accuracy evaluation when comparing structured corrective pipelines with unconstrained frontier models. The frontier models (GPT-5.5, Opus 4.7) achieved higher official leaderboard scores, yet the RAGAs diagnostics indicate a failure to ground answers in the retrieved context: faced with noisy context, they generated answers predominantly from pre-trained knowledge. For example, GPT-5.5 generally led the leaderboard scores and had the highest Answer Relevancy but exhibited extremely low Citation Faithfulness, indicating low reliance on cited contexts in answers; from its leaderboard citation precision and manual trace audits, GPT-5.5 is highly capable of identifying the relevant document(s) within a noisy context window, but the details of generated answers typically did not rely on that same context.", "m": [], "c": false}, {"t": "The corrective pipeline led our submissions on Global and Citation Faithfulness, but this triggered penalties on some leaderboard metrics: when retrieved chunks lacked the answer, it would abstain rather than generate from parametric memory, and these abstentions are penalized by metrics reliant on relevancy or n-gram overlaps despite being a more faithful failure mode than parametric memory leaks. This highlights a challenge in trustworthy RAG benchmarking where chosen evaluation metrics may reward failure modes which hallucinate citations to maintain conversational fluency over safer abstentions.", "m": [], "c": false}, {"t": "Statistical significance: a Wilcoxon signed-rank test on the paired RAGAs evaluation scores across the 47 test queries indicated the corrective interventions did not yield a statistically significant improvement to citation faithfulness or answer relevancy.", "m": [], "c": false}, {"t": "", "m": [], "c": false}, {"t": "[6 Future Work / limitations]", "m": [], "c": false}, {"t": "Frontier model submissions score well on lexical similarity metrics but poorly on faithfully grounding answers in retrieved evidence; conversely the Gemma-4-31B pipelines exhibit relatively high faithfulness but much lower relevance and citation precision. Since our prompting strategy did not require strictly extractive answers, instead requesting synthesis across relevant passages, we posit that forcing extractive output text would greatly improve lexical similarity and potentially induce more faithful answering from the higher capacity models, if at a penalty to clarity and coherence.", "m": [], "c": false}, {"t": "Immediate next step: verify that the CRAG and CiteFix corrective interventions successfully improve answer grounding across families and sizes of generators — initial results show no statistically significant increase in faithfulness over the baseline. Further exploration of NLI model use for scientific claim verification is needed to understand whether the null result is driven by NLI brittleness rather than applicability of post-hoc pruning in this domain. The lack of a CRAG+CiteFix submission to the leaderboard using GPT-5.5 Thinking or Claude Opus 4.7 Thinking was due to practical submission limit and time constraints within the evaluation period. We encourage release of the hidden gold set query answers to facilitate expanded ablation studies.", "m": [], "c": false}, {"t": "RAGAs evaluation limitations: a single, uncalibrated reference-free LLM judge was used for faithfulness and relevancy. Future evaluations will deploy multi-judge ensembles, enabling evaluation of intraclass correlations across judges and mitigation of known evaluator biases such as self-preference or verbosity.", "m": [], "c": false}, {"t": "The RAG systems and RAGAs evaluators should also be extended across multiple snapshots within the LongEval corpus; the current evaluation focused on a static payload. A longitudinal dataset would assess QA performance under the types of temporal drift which penalize use of point-in-time parametric memory. Additionally, the threshold hyperparameters for CRAG and CiteFix are tuned for a specific generation task and their performance over multiple snapshots may degrade, similar to standard retrievers and generators. Longitudinal evaluation should explore adaptive tuning of the active interventions and assess how corpus shifts impact the faithfulness and relevancy judgments of the underlying RAGAs LLM judge; as these metrics are tied to an LLM-as-a-judge method, temporal bias should be evaluated and compared to other known judge biases when interpreting longitudinal RAGAs scores.", "m": [], "c": false}, {"t": "", "m": [], "c": false}, {"t": "[7 Conclusions]", "m": [], "c": false}, {"t": "We find a divergence between traditional language metrics and factual grounding in RAG. Unconstrained frontier models generally achieved better ROUGE and BERT score with query-aligned answers, but our diagnostics show this comes from utilization of parametric memory rather than retrieved context. Conversely, deployment of active interventions pre- and post-generation does improve structural honesty in RAG QA systems. Securing RAG QA pipelines in scientific domains relies on both strict grounding to evidence and overall quality of answer; we therefore recommend adoption of evaluation metrics that reward structural safety and proper failure modes within RAG systems.", "m": [], "c": false}, {"t": "", "m": [], "c": false}, {"t": "[Acknowledgments]", "m": [], "c": false}, {"t": "Thanks to the Data Science at Georgia Tech Applied Research Competitions (DS@GT ARC) group for their support. Research supported in part through research cyberinfrastructure resources and services provided by the Partnership for an Advanced Computing Environment (PACE) at the Georgia Institute of Technology, Atlanta, Georgia, USA [PACE].", "m": [], "c": false}, {"t": "", "m": [], "c": false}, {"t": "[Declaration on Generative AI]", "m": [], "c": false}, {"t": "During preparation of this work the authors used Gemini 3.1 Pro to aid in formatting, grammar, and spell checking. After using these tools the authors reviewed and edited the content as needed and take full responsibility for the publication's content.", "m": [], "c": false}, {"t": "", "m": [], "c": false}, {"t": "[8.1 Appendix — Answer Generation Prompt]", "m": [], "c": false}, {"t": "For each query the LLM receives both the user scientific query and the CRAG-filtered evidence block for the research based approaches (excluded for baseline). The prompt instructs a concise, paraphrased answer synthesizing evidence from retrieved document chunks without directly copying. Exact template [세부-답안생성 프롬프트].", "m": [{"s": 304, "e": 318, "t": "[세부-답안생성 프롬프트]", "n": "세부-답안생성 프롬프트"}], "c": false}, {"t": "", "m": [], "c": false}, {"t": "[8.2 Appendix — TREC-AutoJudge IR Axiom Results, reading of T5/T6]", "m": [], "c": false}, {"t": "Notably, the organizers' naive baseline performed best across several proximity and intersection-based metrics. We hypothesize the performance gap is an artifact of the divergence between extractive and abstractive generation methods: classical IR axioms like GEN-AND and GEN-PROX4 reward lexical overlap and term proximity, which an extractive baseline inherently satisfies, whereas our RAG pipelines were prompted to perform abstractive synthesis across the supplied context, which can break lexical overlaps and alter term distances, resulting in penalty by these axioms. We acknowledge that stricter extractive prompting could improve scores on these axioms.", "m": [], "c": false}, {"t": "", "m": [], "c": false}]}, "details": [{"name": "세부-제출 JSONL 예시", "tokens": 148, "text": "Figure 1, expected JSONL schema for LongEval-RAG submissions:\n{\"metadata\":{\"team_id\":\"LongEval DS@GT\",\"run_id\":\"example-run\",\"narrative_id\":\"aa42e210a...\",\"narrative\":\"How can a device avoid futile access ...\"},\"references\":[275699672,275699915,122371639,...],\"answer\":[{\"text\":\"A device can avoid futile NR access by using ...\",\"citations\":[0,1]}]}\nFig.1 note: the citations array relies on local positional indices mapping back to the references array, rather than the global document IDs in the generated text.\n"}, {"name": "세부-골드답안 유사도 수치", "tokens": 367, "text": "Columns for every row below: (LongEval Lab) Naive Baseline | (DS@GT) Hybrid Baseline | CRAG+CiteFix | GPT-5.5 Thinking | Claude Opus 4.7 Thinking\ngold-answer similarity [T2 = Table 2; T1 = Table 1 also carried two unlabeled headline columns]\nR-1 (ROUGE, word one-grams) | 0.142 | 0.207 | 0.201 | 0.292 | 0.284\nR-2 (ROUGE, bi-grams) | 0.023 | 0.023 | 0.024 | 0.062 | 0.057\nR-L (ROUGE, longest overlapping phrase; identical to T1 unlabeled column 1) | 0.082 | 0.132 | 0.126 | 0.188 | 0.169\nBERT-P (BERT precision, all queries) | -0.313 | 0.117 | 0.064 | 0.242 | 0.097\nBERT-R (BERT recall, all queries) | 0.090 | 0.117 | 0.086 | 0.210 | 0.217\nT1 unlabeled column 2 (BERT-side headline score; label stripped in source) | -0.118 | 0.118 | 0.076 | 0.227 | 0.157\n"}, {"name": "세부-인용정밀도-너깃 수치", "tokens": 139, "text": "Columns for every row below: (LongEval Lab) Naive Baseline | (DS@GT) Hybrid Baseline | CRAG+CiteFix | GPT-5.5 Thinking | Claude Opus 4.7 Thinking\ncitation / nugget [T1 = Table 1]\nCitation Precision | 0.200 | 0.766 | 0.692 | 0.904 | 1.000\nNugget Cov. | 0.124 | 0.210 | 0.152 | 0.308 | 0.443\n"}, {"name": "세부-IR공리 수치", "tokens": 678, "text": "Columns for every row below: (LongEval Lab) Naive Baseline | (DS@GT) Hybrid Baseline | CRAG+CiteFix | GPT-5.5 Thinking | Claude Opus 4.7 Thinking\nTREC-AutoJudge IR axioms [T5 = Table 5; GEN-TFC1 also appears in T1 = Table 1 labeled \"TFC1\", same values] — GEN-* evaluate proximity properties of generated answers with respect to the input query; higher values indicate better results\nGEN-TFC1 (T1: TFC1) | -0.758 | -0.322 | -0.505 | 0.434 | 0.017\nGEN-LNC1 | 0.000 | 0.001 | 0.005 | 0.000 | 0.000\nGEN-REG | -0.184 | -0.126 | -0.257 | 0.345 | 0.065\nGEN-AND | 0.737 | -0.263 | -0.242 | -0.157 | -0.136\nGEN-DIV | 0.626 | 0.223 | 0.406 | -0.512 | -0.290\nGEN-STMC1 | -0.662 | -0.112 | -0.364 | 0.501 | -0.124\nGEN-STMC2 | 0.041 | 0.018 | -0.008 | 0.018 | 0.042\nGEN-PROX1 | 0.137 | 0.006 | 0.002 | 0.014 | -0.007\nGEN-PROX2 | -0.083 | -0.008 | -0.004 | -0.029 | 0.055\nGEN-PROX3 | 0.116 | 0.000 | 0.001 | 0.001 | -0.015\nGEN-PROX4 | 0.136 | 0.000 | 0.000 | 0.002 | 0.013\nGEN-PROX5 | 0.050 | 0.000 | 0.006 | 0.025 | 0.019\nGEN-ASL | 0.000 | 0.000 | 0.000 | 0.000 | 0.000\nGEN-TF-LNC | -0.005 | -0.010 | -0.013 | 0.009 | -0.008\n"}, {"name": "세부-일관성명료성 수치", "tokens": 572, "text": "Columns for every row below: (LongEval Lab) Naive Baseline | (DS@GT) Hybrid Baseline | CRAG+CiteFix | GPT-5.5 Thinking | Claude Opus 4.7 Thinking\nTREC-AutoJudge coherence / coverage / consistency / correction / clarity [T6 = Table 6; COH1-0.75, COH2-0.75, CLAR1-0.5, CLAR2-0.5 also appear in T3 = Table 3 as COH1, COH2, CLAR1, CLAR2]\nCOH1-0.75 (T3: COH1) | -0.150 | 0.024 | -0.021 | 0.427 | 0.857\nCOH2-0.75 (T3: COH2) | -0.064 | 0.020 | 0.021 | 0.004 | -0.119\nCOV1-SE-0.5 | 0.859 | -0.150 | -0.047 | -0.404 | 0.165\nCOV2-SE-0.5 | 0.363 | -0.024 | 0.005 | -0.051 | -0.107\nCOV3-SE-0.5 | 0.018 | -0.017 | -0.003 | -0.025 | -0.032\nCONS3-0.5 | 0.005 | 0.003 | 0.005 | 0.003 | 0.005\nCORR1-0.75 | 0.001 | 0.001 | 0.001 | 0.001 | 0.001\nCLAR1-0.5 (T3: CLAR1) | -0.093 | -0.006 | 0.013 | source tables disagree: 0.014 in T3 / 0.013 in T6 | 0.013\nCLAR2-0.5 (T3: CLAR2) | 0.678 | -0.030 | -0.183 | 0.239 | 0.818\n"}, {"name": "세부-RAGAs 수치", "tokens": 182, "text": "Columns for every row below: (LongEval Lab) Naive Baseline | (DS@GT) Hybrid Baseline | CRAG+CiteFix | GPT-5.5 Thinking | Claude Opus 4.7 Thinking\nRAGAs reference-free diagnostics [T4 = Table 4; Naive Baseline not evaluated; \"—\" = system not evaluated on that metric]\nGlobal Faithfulness | — | 0.741 | 0.784 | 0.559 | 0.553\nCitation Faithfulness | — | 0.741 | 0.758 | 0.417 | 0.528\nAnswer Relevancy | — | 0.531 | 0.476 | 0.756 | 0.646\n"}, {"name": "세부-답안생성 프롬프트", "tokens": 114, "text": "Answer generation prompt, exact template:\nQuestion:\n{query}\nCRAG-filtered evidence:\n{evidence_block}\nWrite a direct answer in 1-3 sentences, about 30-65 words total.\nRules:\n- No bullets, markdown, or inline citations.\n- Do not mention passage numbers or evidence labels.\n- Synthesize the answer rather than copying source text.\n- Even if evidence is partial, give the strongest concise answer\nsupported by the evidence.\n- Write in English only.\n- Use standard English spellings for chemical names and technical terms.\n"}], "stats": {"n_detail": 7, "main_tokens": 4674, "detail_tokens_total": 2200, "detail_tokens_mean": 314.3, "detail_tokens_min": 114, "detail_tokens_max": 678, "all_tokens": 6874}, "questions": [{"q": "What Citation Precision did the DS@GT hybrid baseline achieve …, and what did the organizers' naive baseline achieve?", "picked": ["세부-인용정밀도-너깃 수치"], "why": "메인 본문은 Citation Precision 행이 T1에 있다는 사실만 밝히고 실제 수치는 [세부-인용정밀도-너깃 수치]로 빼두었으므로, 두 시스템의 값을 읽으려면 그 세부 캐시가 필요하다.", "answer": "DS@GT Hybrid Baseline: Citation Precision 0.766. LongEval organizers' Naive Baseline: 0.200.", "gold": "DS@GT 0.766 / Naive 0.200", "verdict": "정답 (두 값 모두)", "no_context": "UNKNOWN", "control": "UNKNOWN", "picked_tokens": 139, "eff_tokens": 4813, "eff_pct": 68.2, "note": null, "kind": "한계", "anchors": [{"name": "세부-인용정밀도-너깃 수치", "line": 56, "mark": 0}]}]}, {"id": "rule", "label": "행정규칙", "source": "고용노동부 고시 제2026-56호 (발령 다음날 · 저작권법 §7)", "warn": null, "tokens": {"source": 11624, "refined": 10449, "main": 8250, "detail_all": 2983, "dist_all": 11233}, "ratios": {"refined": 89.9, "dist_all": 96.6, "resident": 71.0}, "kv": {"source": 136.22, "refined": 122.45, "resident": 96.68}, "cost": 7.5, "main": {"tokens": 8250, "lines": [{"t": "【직업능력개발 훈련품질에 관한 규정 · 고시 · 2026-56 · 20260801 · 20260801 · 고용노동부 · 고용노동부(인적자원개발과)】", "m": [], "c": false}, {"t": "", "m": [], "c": false}, {"t": "[표기] §n=제n조 · ①②=제1항·제2항 · n호=제n호 (§13⑤=제13조제5항) · 법=「국민 평생 직업능력 개발법」 · 해야=하여야 한다 · 가능=할 수 있다", "m": [], "c": true}, {"t": "", "m": [], "c": false}, {"t": "[규약] §2 각 호 용어의 정의문은 [세부-정의-\u003c용어>]에 있다. 본문에서는 용어 뒤에 [정]으로만 표시. 그 밖의 세부는 표시 자리에 이름을 적는다.", "m": [{"s": 51, "e": 54, "t": "[정]", "n": null}], "c": true}, {"t": "", "m": [], "c": false}, {"t": "■ 제1장 총칙", "m": [], "c": false}, {"t": "§1(목적) 근거: 법§7의2·19·24·53·54·59·60, 같은 법 시행령§7·17·22·48·49·51·52④, 같은 법 시행규칙§8. 직업훈련기관 평가, 직업훈련과정 심사 및 성과평가, 민간 학습관리시스템 임대 지원 등 직업훈련의 품질관리에 관한 사항을 정함.", "m": [], "c": false}, {"t": "", "m": [], "c": false}, {"t": "§2(정의) 1호 국가기간ㆍ전략산업직종훈련[정] / 2호 직업능력개발계좌제훈련[정] / 3호 근로자직업능력개발훈련[정] / 4호 사업주직업능력개발훈련[정] / 5호 국가인적자원개발컨소시엄지원훈련[정] / 6호 훈련기관 평가[정] / 7호 훈련과정 심사[정] / 8호 외국어훈련과정[정] / 9호 원격훈련[정] / 10호 자체훈련[정] / 11호 훈련과정 성과평가[정] / 12호 국가직무능력표준(이하 \"NCS\")[정] / 13호 신규훈련기관[정] / 14호 중앙행정기관 및 자치단체 인력양성ㆍ훈련사업[정] / 15호 훈련사업 성과평가[정] / 16호 민간 학습관리시스템 임대 지원[정] / 17호 훈련 컨설팅[정]", "m": [{"s": 23, "e": 26, "t": "[정]", "n": "세부-정의-국가기간ㆍ전략산업직종훈련"}, {"s": 43, "e": 46, "t": "[정]", "n": "세부-정의-직업능력개발계좌제훈련"}, {"s": 63, "e": 66, "t": "[정]", "n": "세부-정의-근로자직업능력개발훈련"}, {"s": 83, "e": 86, "t": "[정]", "n": "세부-정의-사업주직업능력개발훈련"}, {"s": 108, "e": 111, "t": "[정]", "n": "세부-정의-국가인적자원개발컨소시엄지원훈련"}, {"s": 124, "e": 127, "t": "[정]", "n": "세부-정의-훈련기관 평가"}, {"s": 140, "e": 143, "t": "[정]", "n": "세부-정의-훈련과정 심사"}, {"s": 156, "e": 159, "t": "[정]", "n": "세부-정의-외국어훈련과정"}, {"s": 169, "e": 172, "t": "[정]", "n": "세부-정의-원격훈련"}, {"s": 183, "e": 186, "t": "[정]", "n": "세부-정의-자체훈련"}, {"s": 202, "e": 205, "t": "[정]", "n": "세부-정의-훈련과정 성과평가"}, {"s": 230, "e": 233, "t": "[정]", "n": "세부-정의-국가직무능력표준"}, {"s": 246, "e": 249, "t": "[정]", "n": "세부-정의-신규훈련기관"}, {"s": 279, "e": 282, "t": "[정]", "n": "세부-정의-중앙행정기관 및 자치단체 인력양성ㆍ훈련사업"}, {"s": 298, "e": 301, "t": "[정]", "n": "세부-정의-훈련사업 성과평가"}, {"s": 324, "e": 327, "t": "[정]", "n": "세부-정의-민간 학습관리시스템 임대 지원"}, {"s": 340, "e": 343, "t": "[정]", "n": "세부-정의-훈련 컨설팅"}], "c": false}, {"t": "", "m": [], "c": false}, {"t": "§3(적용범위) 다음 중 하나에 해당하는 훈련사업에 참여하는 훈련기관 및 훈련과정에 적용:", "m": [], "c": false}, {"t": "1호 국가기간ㆍ전략산업직종훈련(국가기간산업직종 훈련과정과 첨단산업ㆍ디지털 핵심 실무인재 양성훈련 포함) / 2호 직업능력개발계좌제훈련 / 3호 근로자직업능력개발훈련 / 4호 사업주직업능력개발훈련 / 5호 국가인적자원개발컨소시엄지원훈련 / 6호 삭제 / 7호 기타 고용노동부장관이 훈련품질관리가 필요하다고 인정한 훈련", "m": [], "c": false}, {"t": "", "m": [], "c": false}, {"t": "§4(업무의 수행) ① 고용노동부장관은 법§59·60, 같은 법 시행령(이하 \"시행령\")§51·52④에 따라 이 고시에서 규정한 법§7의2에 따른 직업훈련의 품질관리 업무의 일부를 법§52의2에 따라 설립된 기술교육대학(이하 \"심사평가기관\") 또는 「한국산업인력공단법」에 따른 한국산업인력공단에게 수행하게 한다. ② 심사평가기관은 ①의 업무를 공정하고 투명하게 수행해야.", "m": [], "c": false}, {"t": "", "m": [], "c": false}, {"t": "■ 제2장 심사평가위원", "m": [], "c": false}, {"t": "§5(심사평가위원 관리위원회) ① 심사평가기관의 장은 심사평가위원 위촉ㆍ평가ㆍ해촉 등을 위해 외부전문가 2/3 이상으로 구성된 심사평가위원 관리위원회(이하 \"관리위원회\") 운영 가능. ② 관리위원회 외부위원은 §6의 심사평가위원 자격을 갖추어야. ③ 관리위원회는 사전심의ㆍ의결 원칙. 단, 심사평가기관의 장이 필요하다고 인정하면 사후의결 가능.", "m": [], "c": false}, {"t": "", "m": [], "c": false}, {"t": "§6(심사평가위원 위촉) ① 심사평가기관의 장은 법§7의2 2호·4호·6호 업무 수행을 위해 다음 중 하나에 해당하는 산업현장 전문가, 직업훈련 전문가 등으로 심사평가위원을 위촉해야 [세부-심사평가위원 위촉 자격요건].", "m": [{"s": 102, "e": 121, "t": "[세부-심사평가위원 위촉 자격요건]", "n": "세부-심사평가위원 위촉 자격요건"}], "c": false}, {"t": "② 위촉하려는 자가 심사평가 대상 훈련기관에서 강의, 용역, 컨설팅, 운영, 자문 등을 수행하고 있거나 수행한 이력이 있으면 위촉대상에서 제외해야. 단, 신산업ㆍ신기술 분야 훈련 심사평가 및 훈련성과 관리 등을 위해 심사평가기관의 장이 필요하다고 인정하면 그러하지 아니하다.", "m": [], "c": false}, {"t": "③ 임기 2년 이하, 필요에 따라 재위촉 가능. ④ 심사평가기관의 장은 위촉하려는 자로부터 비밀유지의무 등을 포함한 별표1의 서약서를 제출받아야. ⑤ 심사평가위원은 심사평가기관이 주관하는 심사평가의 기준 및 방법 등에 관한 교육과정을 이수해야. ⑥ ①에도 불구하고 심사평가기관의 장은 지방고용노동관서 및 심사평가기관의 소속직원을 심사평가위원으로 위촉하여 활용 가능.", "m": [], "c": false}, {"t": "", "m": [], "c": false}, {"t": "§7(심사평가위원 활용) 심사평가기관의 장은 §6에 따라 위촉된 심사평가위원의 전문 분야에 따라 심사평가 대상 훈련기관 또는 훈련과정, 훈련사업마다 2인 이상이 참여하도록 해야.", "m": [], "c": false}, {"t": "", "m": [], "c": false}, {"t": "§8(심사평가위원 평가 및 해촉) ① 심사평가기관의 장은 심사평가위원이 부여된 업무 및 교육이수를 성실히 수행하였는지 여부 등을 주기적으로 평가해야. ② 다음에 해당하는 위원은 해촉 가능: 1호 ①의 평가결과가 저조한 경우 / 2호 별표1의 서약서를 준수하지 않은 경우 / 3호 사회적 물의를 일으킨 경우", "m": [], "c": false}, {"t": "", "m": [], "c": false}, {"t": "§9(수당) 심사평가기관의 장은 심사평가위원에게 예산 범위 내에서 수당 등 지급 가능.", "m": [], "c": false}, {"t": "", "m": [], "c": false}, {"t": "■ 제3장 훈련기관 평가", "m": [], "c": false}, {"t": "§10(기관평가 대상) ① 심사평가기관의 장은 §3 각 호 중 하나에 해당하는 훈련사업에 참여하고자 하는 훈련기관에 대해 매년 기관 건전성과 훈련실시 역량 등을 종합적으로 평가해야. ② 고용노동부장관은 중앙부처의 장 및 자치단체의 장 등의 요청이 있으면 §3 각 호 이외의 훈련사업에 참여하는 훈련기관에 대한 평가를 심사평가기관의 장에게 수행하도록 할 수 있다. ③ ①에도 불구하고 다음 중 하나에 해당하는 훈련기관은 평가대상에서 제외 가능: 1호 사업주 자체훈련기관 / 2호 「국가인적자원개발 컨소시엄 운영규정」§2의 공동훈련센터 / 3호 정부가 출연ㆍ재출연한 공공 직업훈련시설로서 자체 평가장치를 마련하여 평가를 실시 또는 실시하고자 하는 훈련기관 / 4호 기타 고용노동부장관이 평가의 대상에서 제외할 필요가 있다고 인정하는 훈련기관", "m": [], "c": false}, {"t": "", "m": [], "c": false}, {"t": "§11(기관평가 계획 수립 및 공고) ① 심사평가기관의 장은 다음이 포함된 다음연도 평가계획 [세부-기관평가 계획 포함사항]을 수립하여 매년 11월 30일까지 고용노동부장관에게 보고하고, 평가계획을 법§6①에 따른 직업능력개발정보망(이하 \"HRD-Net\")에 공고해야.", "m": [{"s": 52, "e": 69, "t": "[세부-기관평가 계획 포함사항]", "n": "세부-기관평가 계획 포함사항"}], "c": false}, {"t": "② 평가계획 공고 내용이 변경된 경우 변경 공고해야.", "m": [], "c": false}, {"t": "", "m": [], "c": false}, {"t": "§12(기관평가 사항) ① 심사평가기관의 장은 훈련기관의 준법성 및 재정건전성, 훈련성과, 훈련실시역량 등을 중심으로 훈련기관 평가를 실시해야. ② 평가사항별 세부평가항목, 평가항목별 배점 등은 §11에 따른 해당연도 평가계획에 따른다. ③ 심사평가기관의 장은 미흡 외의 평가등급을 보유한 훈련기관에 대해 §11에 따른 해당연도 평가계획을 통해 준법성 및 재정건전성, 훈련성과 등을 평가하여 평가등급 유지 여부 판단 가능. ④ 훈련기관이 평가 실시연도에 전과정 위탁ㆍ인정제한 처분을 받은 경우 §13·§14에도 불구하고 즉시 미흡 등급이 부여된 것으로 본다.", "m": [], "c": false}, {"t": "", "m": [], "c": false}, {"t": "§13(기관평가 방법) ① 심사평가위원은 서류심사 및 현장평가 등을 통해 훈련기관을 평가해야. ② 심사평가기관의 장은 심사평가위원이 훈련기관에 대한 현장평가를 실시할 경우 평가실시 14일 전까지 해당 훈련기관에게 현장평가계획을 알려주고, 그에 따라서 평가해야. 단, 현장평가계획을 미리 알려주기 어려운 부득이한 사유가 있는 경우 그 기간을 달리할 수 있다. ③ 심사평가기관의 장은 심사평가위원의 평가결과를 종합하여 다음 평가등급을 평가대상기관에 부여 가능. 단, 평가대상기관이 §10에 따른 평가에 참여하지 않거나, 평가 진행 중 포기하는 경우 등 평가를 받지 않은 경우에는 '미흡' 등급을 부여해야:", "m": [], "c": false}, {"t": "1호 평가등급을 보유하고 훈련에 참여하는 훈련기관: '일반(3년)' 또는 '미흡' / 2호 신규 또는 미흡 등급을 보유한 훈련기관: '신규(1년)' 또는 '미흡'", "m": [], "c": false}, {"t": "④ ③에 따라 평가등급을 부여할 경우 최종적으로 관할 지방고용노동관서, 한국산업인력공단의 의견을 반영한 후 기관평가 심의위원회를 거쳐 확정해야. ⑤ ④의 기관평가 심의위원회는 심사평가기관의 장이 정한 심의위원회 운영계획에 따라 직업능력개발분야의 전문가 등으로 구성하여 운영한다.", "m": [], "c": false}, {"t": "", "m": [], "c": false}, {"t": "§14(기관평가 유효기간) ① 기관평가의 효력은 평가등급에 따라 각 호 기간 동안 유효 [세부-기관평가 등급별 유효기간](단, 심사평가기관의 장은 필요한 경우 각 호 평가등급 유효기간의 시작일과 종료일 변경 가능).", "m": [{"s": 49, "e": 67, "t": "[세부-기관평가 등급별 유효기간]", "n": "세부-기관평가 등급별 유효기간"}], "c": false}, {"t": "② 심사평가기관의 장은 ①1호·2호의 유효기간 내에서 준법성, 재정건전성, 훈련성과 등을 평가 가능하며, 그 결과에 따라 평가등급 및 유효기간 조정 가능.", "m": [], "c": false}, {"t": "", "m": [], "c": false}, {"t": "§15(기관평가 결과 게시 등) ① 심사평가기관의 장은 기관평가 결과를 고용노동부장관에게 보고하고, 그 결과를 HRD-Net에 게시. 단, 훈련기관에 대한 통보는 HRD-Net에 게시한 것으로 갈음. ② 평가결과에 이의가 있는 훈련기관은 결과를 통보받은 날(=HRD-Net에 결과가 게시된 날. 이하 같다)을 기준으로 §11의 평가계획에서 정한 기간 이내에 심사평가기관에 이의신청 가능. ③ 심사평가기관의 장은 ②의 이의신청 처리를 위해 이의신청심의위원회를 운영해야 하며, 그 결과를 고용노동부장관에게 보고해야. ④ ③의 이의신청심의위원회의 구성 및 운영은 §13⑤ 준용.", "m": [], "c": false}, {"t": "", "m": [], "c": false}, {"t": "§16(기관평가 결과 활용) ① 심사평가기관의 장은 기관평가 결과를 훈련과정 심사, 우수훈련기관 선정 등에 반영 가능. ② 평가등급이 미흡으로 변경되거나 그 유효기간이 조정되는 경우 관할 지방고용노동관서, 한국산업인력공단에 훈련과정 유효기간의 변경을 요청해야.", "m": [], "c": false}, {"t": "", "m": [], "c": false}, {"t": "■ 제4장 훈련과정 심사", "m": [], "c": false}, {"t": "§17(심사대상) ① 심사평가기관의 장은 §3 각 호 중 하나에 해당하는 훈련사업에 참여하고자 하는 훈련기관이 제출한 훈련과정을 심사. 단, 다음 중 하나는 심사대상에서 제외 가능: 1호 기관평가 결과가 없거나 미흡 등급을 받은 훈련기관이 제출한 훈련과정 / 2호 외국어훈련과정 / 3호 자체훈련과정(원격훈련 제외) / 4호 그 밖에 고용노동부장관이 별도 심사가 필요하다고 인정하는 훈련과정", "m": [], "c": false}, {"t": "② 고용노동부장관은 시범사업의 도입, 중앙부처 및 지방자치단체의 장 등의 요청이 있으면 §3 각 호 이외의 훈련사업에 참여하고자 하는 훈련기관이 제출한 훈련과정 심사를 심사평가기관의 장에게 수행하도록 할 수 있다. ③ 고용노동부장관은 ① 각 호 중 하나에 해당하는 훈련과정의 심사에 대해서는 지방고용노동관서의 장 또는 시행령§51①1호에 따른 한국산업인력공단이 수행하도록 할 수 있다.", "m": [], "c": false}, {"t": "", "m": [], "c": false}, {"t": "§18(심사계획수립 및 공고) 심사평가기관의 장은 다음을 포함한 세부적인 심사계획 [세부-훈련과정 심사계획 포함사항]을 고용노동부장관에게 보고해야 하고, 심사계획을 HRD-Net에 공고해야.", "m": [{"s": 46, "e": 65, "t": "[세부-훈련과정 심사계획 포함사항]", "n": "세부-훈련과정 심사계획 포함사항"}], "c": false}, {"t": "", "m": [], "c": false}, {"t": "§19(심사 사항) ① 심사평가기관의 장은 훈련 목표 및 내용, 훈련시설ㆍ장비, 훈련 교ㆍ강사의 적정성 등을 중심으로 훈련과정 심사를 실시해야. ② 심사 사항별 세부 심사내용 및 기준 등은 §18의 해당연도 심사계획에 따른다.", "m": [], "c": false}, {"t": "", "m": [], "c": false}, {"t": "§20(심사방법) ① 심사평가위원은 훈련기관에서 제출한 자료 등에 대해 훈련과정 심사를 해야. ② 심사평가기관의 장은 심사평가위원이 §18에 따른 훈련과정 심사기준 및 절차에 따라 훈련과정을 심사하도록 해야. ③ 심사평가기관의 장은 ②의 심사 결과는 과정심사 심의위원회를 거쳐 확정해야 하며, 관할 지방고용노동관서 또는 한국산업인력공단의 의견 반영 가능. 단, 과정심사 심의위원회는 심사 주기 등을 고려하여 개최 시기 조정 가능. ④ ③의 과정심사 심의위원회의 구성 및 운영은 §13⑤ 준용.", "m": [], "c": false}, {"t": "", "m": [], "c": false}, {"t": "§21(심사시기) ① 심사평가기관의 장은 §17①에 해당하는 훈련과정 심사를 §18의 심사계획에서 정한 시기에 실시. ② ①에도 불구하고 훈련과정 운영시기, 훈련방법, 훈련특성 등을 고려하여 추가 또는 별도 심사가 필요하거나 고용노동부장관의 요청이 있으면 심사계획을 별도로 수립하여 실시 가능.", "m": [], "c": false}, {"t": "", "m": [], "c": false}, {"t": "§22(심사결과 게시 등) ① 심사평가기관의 장은 심사결과를 고용노동부장관에게 보고해야 하고, §18의 심사계획에서 정한 기한 이내에 그 결과를 HRD-Net에 게시해야. ② 심사결과에 이의가 있는 훈련기관은 인정대상 목록 공고일 또는 심사결과를 통보받은 날로부터 §18의 심사계획에서 정한 기간 이내에 이의신청 가능. ③ 심사평가기관의 장은 ②의 이의신청 처리를 위해 이의신청심의위원회를 운영하고, 그 결과를 고용노동부장관에게 보고해야. ④ ③의 이의신청심의원회의 구성 및 운영은 §13⑤ 준용.", "m": [], "c": false}, {"t": "", "m": [], "c": false}, {"t": "■ 제5장 훈련과정 및 훈련사업 성과평가", "m": [], "c": false}, {"t": "§23(성과평가 대상) ① 심사평가기관의 장은 훈련의 품질 제고를 위하여 §3 각 호의 훈련과정 및 훈련사업에 대해 성과평가 실시 가능. ② 고용노동부장관은 중앙부처의 장 및 지방자치단체의 장 등의 요청이 있으면 §3 각 호 이외의 훈련과정 또는 훈련사업에 대한 성과평가를 심사평가기관의 장에게 수행하도록 할 수 있다.", "m": [], "c": false}, {"t": "", "m": [], "c": false}, {"t": "§24(성과평가 계획수립 및 공고) 심사평가기관의 장은 매년 12월 31일까지 다음이 포함된 다음연도 훈련과정 또는 훈련사업의 성과평가계획 [세부-성과평가 계획 포함사항]을 고용노동부장관에게 보고해야 하고, 성과평가계획을 평가실시 전에 HRD-Net에 공고해야.", "m": [{"s": 78, "e": 95, "t": "[세부-성과평가 계획 포함사항]", "n": "세부-성과평가 계획 포함사항"}], "c": false}, {"t": "", "m": [], "c": false}, {"t": "§25(성과평가 사항) ① 심사평가기관의 장은 훈련과정의 성과평가에 관하여 훈련생의 직무능력향상 여부를 중심으로 실시해야. ② 심사평가기관의 장은 훈련사업 성과평가에 관하여 훈련기관 및 공동훈련센터의 사업수행역량 및 실적, 성과목표 달성 여부 등을 중심으로 실시해야. ③ ①②의 평가 사항별 세부 평가내용 및 기준 등은 §24의 해당연도 성과평가계획에서 정한 바에 따른다.", "m": [], "c": false}, {"t": "", "m": [], "c": false}, {"t": "§26(성과평가 방법) ① 심사평가위원은 서면평가, 현장평가 등을 통해 훈련과정 또는 훈련사업의 성과를 평가해야. ② 심사평가기관의 장은 심사평가위원이 훈련기관 또는 공동훈련센터에 대한 현장평가를 실시할 경우 §13②과 같다(사전통지 기한·단서 동일, 대상만 훈련기관 또는 공동훈련센터). ③ 심사평가기관의 장은 심사평가위원이 §24에 따른 성과평가계획에 따라 훈련과정 또는 훈련사업을 평가하도록 해야. ④ 심사평가기관의 장은 심사평가위원의 평가결과를 종합하여 §24의 성과평가계획에 따른 어느 하나의 등급을 부여하는 방법으로 평가해야. ⑤ 심사평가기관의 장은 ④의 성과평가 결과는 성과평가 심의위원회를 거쳐 확정해야 하며, 관할 지방고용노동관서 또는 한국산업인력공단의 의견 반영 가능. 단, 심의위원회는 평가 주기 등을 고려하여 개최 시기 조정 가능. ⑥ ⑤의 성과평가 심의위원회의 구성 및 운영은 §13⑤ 준용.", "m": [], "c": false}, {"t": "", "m": [], "c": false}, {"t": "§27(성과평가 결과통보 등) ① 심사평가기관의 장은 성과평가 결과를 고용노동부장관에게 보고하고, 그 결과를 HRD-Net에 게시해야. ② 성과평가 결과에 이의가 있는 훈련기관 또는 공동훈련센터는 평가결과를 통보받은 날로부터 §24의 훈련과정 또는 훈련사업 성과평가계획에서 정한 기간 이내에 이의신청 가능. ③ 심사평가기관의 장은 ②의 이의신청 처리를 위해 이의신청심의위원회를 운영하고, 그 결과를 고용노동부장관에게 보고해야. ④ ③의 이의신청심의위원회의 구성 및 운영은 §13⑤ 준용.", "m": [], "c": false}, {"t": "", "m": [], "c": false}, {"t": "§28(성과평가 결과의 활용) ① 심사평가기관의 장은 훈련과정 성과평가 결과를 §11에 따른 훈련기관 평가 및 §18에 따른 훈련과정 심사 시 반영 가능하며, §24의 성과평가계획에 따라 그 결과의 활용을 달리 정할 수 있다.", "m": [], "c": false}, {"t": "", "m": [], "c": false}, {"t": "■ 제6장 우수훈련기관 등 선정 및 우대", "m": [], "c": false}, {"t": "§29(우수훈련기관 등의 선정 및 취소) ① 심사평가기관의 장은 우수훈련기관을 선정하기 위하여 사전에 선정 및 취소 기준을 HRD-Net에 공고해야. ② 심사평가기관의 장은 ①의 선정기준에 따라 우수훈련기관 선정 가능. 단, 매년 우수훈련기관의 준법성, 재정건전성 및 훈련성과 등 확인 가능. ③ ②에 따라 선정된 우수훈련기관이 다음에 해당하면 우수훈련기관 선정을 취소하거나 평가등급 및 그 유효기간 조정 가능: 1호 ② 단서에 따른 확인 결과, ①의 우수훈련기관 취소 기준에 해당하는 경우 / 2호 법령 위반, 사회적 물의 야기 등의 사유로 우수훈련기관으로 부적합하다고 인정된 경우", "m": [], "c": false}, {"t": "④ ②③에 따른 우수훈련기관의 선정 또는 취소에 관해 우수훈련기관 심의위원회를 거쳐 확정해야 하며, 관할 지방고용노동관서 또는 한국산업인력공단의 의견 반영 가능. ⑤ ④의 우수훈련기관 심의위원회의 구성 및 운영은 §13⑤ 준용. ⑥ 심사평가기관의 장은 ②에 따라 선정된 우수훈련기관을 대상으로 베스트직업훈련기관 선정 가능. 그 절차 및 내용은 ①~⑤ 준용.", "m": [], "c": false}, {"t": "", "m": [], "c": false}, {"t": "§30(우수훈련기관 등의 우대혜택) ① 고용노동부장관은 §29에 따른 우수훈련기관, 베스트직업훈련기관(이하 \"우수훈련기관 등\")에 대해 훈련과정 운영 등 별도의 우대조치 가능. ② 심사평가기관의 장은 우수훈련기관 등에 대해 §14의 평가등급 유효기간 외에 최대 2년의 유효기간 추가 부여 가능. ③ §18①에 따른 훈련과정 심사를 통해 인정받은 훈련과정의 유효기간을 평가등급 및 그 유효기간 범위 내에서 최대 3년으로 정할 수 있다. ④ §29③에 따라 우수훈련기관 등의 선정이 취소되는 경우, 그 때부터 ①~③에 따라 부여된 우수훈련기관 등의 우대 혜택을 배제. 이 경우 심사평가기관의 장은 관할 지방고용노동관서, 한국산업인력공단에 훈련과정 유효기간의 변경 요청 등 필요한 조치를 해야.", "m": [], "c": false}, {"t": "", "m": [], "c": false}, {"t": "■ 제7장 중앙행정기관 등 훈련사업 평가", "m": [], "c": false}, {"t": "§31(사업평가) 고용노동부장관은 중앙행정기관 및 지방자치단체 인력양성ㆍ훈련사업(이하 \"정부훈련사업\")의 품질 제고를 위해 정부훈련사업 평가를 심사평가기관을 통해 실시 가능.", "m": [], "c": false}, {"t": "§32(평가방법) ① 심사평가기관의 장은 §31에 따른 평가대상 정부훈련사업에 대하여 서면평가 및 현장평가 등을 통해 사업의 타당성, 사업간 유사ㆍ중복성, 사업성과 등을 평가 가능. ② ①의 평가결과를 평가 종료 후 30일 이내에 고용노동부장관에게 보고해야.", "m": [], "c": false}, {"t": "", "m": [], "c": false}, {"t": "■ 제8장 부정ㆍ부실훈련 방지 등", "m": [], "c": false}, {"t": "§33(부정훈련 조사 및 분석) ① 고용노동부장관은 부정ㆍ부실훈련을 방지하기 위하여 심사평가기관의 장에게 §3 각 호의 훈련사업을 통해 지원받거나 받으려고 하는 훈련과정에 대하여 부정훈련 조사 및 분석을 수행하도록 할 수 있다. ② 심사평가기관의 장은 ①의 업무를 수행하기 위하여 HRD-Net 내 훈련정보 등을 조사ㆍ분석하여 부정훈련이 의심되는 훈련기관 등을 선별하여 고용노동부장관에게 보고해야 하며, 한국산업인력공단에 이를 통보해야. ③ 심사평가기관의 장은 ①의 부정ㆍ부실훈련 방지 업무수행을 위하여 부정훈련신고센터 설치ㆍ운영 가능. ④ 심사평가기관의 장은 ②에 따라 부정훈련이 의심되는 경우 훈련기관의 명단 및 조사ㆍ분석 결과를 관할 지방고용노동관서에 송부하는 등 적절한 조치를 해야.", "m": [], "c": false}, {"t": "", "m": [], "c": false}, {"t": "§34(부정훈련 예방 유관기관 협의회) ① 고용노동부장관은 지방고용노동관서(또는 고용센터), 한국산업인력공단, 한국고용정보원, 심사평가기관 등으로 부정훈련 예방 유관기관 협의회 구성ㆍ운영 가능. ② 위원장 = 고용노동부 직업능력정책국장, 간사 = 심사평가기관의 장, 부득이한 경우 대리 가능. ③ 분기별 1회 이상 개최 원칙, 필요시 고용노동부장관이 조정하여 운영 가능.", "m": [], "c": false}, {"t": "", "m": [], "c": false}, {"t": "§35(합동 지도ㆍ점검 등 지원) ① 심사평가기관의 장은 지방고용노동관서(또는 고용센터) 및 한국산업인력공단의 부정훈련 합동 지도ㆍ점검 요청이 있는 경우 적극 협조해야. ② 심사평가기관의 장은 훈련기관의 부정ㆍ부실훈련을 예방하기 위해 합동 지도ㆍ점검 결과 등을 활용하여 교육 및 홍보활동 수행 가능.", "m": [], "c": false}, {"t": "", "m": [], "c": false}, {"t": "§36(신청기관의 의무 등) ① §11 기관평가, §18 과정심사, §24 훈련사업 및 훈련과정 평가 등을 받고자 하는 훈련기관과 공동훈련센터는 해당 심사평가계획에 따른 훈련실적, 평가보고서 등 관련 서류를 정해진 기한 내 HRD-Net에 입력하거나 서면으로 제출해야. ② 심사평가기관의 장은 심사평가를 위해 필요한 경우 신청기관이 제출한 서류에 대해 현장평가 등 사실 확인 가능하며, 이 경우 신청기관은 심사평가가 원활하게 진행될 수 있도록 심사평가기관과 심사평가위원에게 협조해야. ③ 심사평가기관의 장이 §6에 따라 위촉한 심사평가위원은 신청기관이 ①② 책무를 다하지 않을 경우 해당 심사평가 점수 감점 가능. ④ 심사평가기관의 장은 ①의 신청기관이 다음 중 하나에 해당하는 경우 비흡 등 심사평가 결과에 불이익을 줄 수 있다: 1호 거짓ㆍ조작된 자료를 제출하는 경우 / 2호 심사평가기관의 장이 §6에 따라 위촉한 심사평가위원에게 심사평가 외의 컨설팅, 자문 등 그 연관성이 확인된 경우 / 3호 그 밖의 부정한 방법으로 해당 심사평가를 받은 경우", "m": [], "c": false}, {"t": "⑤ 심사평가기관의 장은 ④의 결과를 반영하기 위해 해당 심사평가사업의 심의위원회 개최 등 적절한 조치를 해야.", "m": [], "c": false}, {"t": "", "m": [], "c": false}, {"t": "■ 제9장 민간 학습관리시스템 임대 지원 등", "m": [], "c": false}, {"t": "§37(민간 학습관리시스템 임대 지원) ① 한국산업인력공단의 장은 공모를 통해 품질이 인증된 민간 학습관리시스템 공급기관 선정 가능. ② 한국산업인력공단의 장은 공급기관 선정 기준 및 선정 절차 운영에 관한 사항 규정 가능. 단, 선정 기준 및 절차를 변경할 경우 고용노동부 장관과 사전 협의해야. ③ 한국산업인력공단의 장은 훈련기관이 ①에 따라 선정된 공급기관을 통하여 민간 학습관리시스템을 구축ㆍ운영하는 데에 필요한 비용의 전부 또는 일부를 해당 공급기관에 지급 가능.", "m": [], "c": false}, {"t": "§37의2(훈련 컨설팅 지원) ① 심사평가기관의 장은 §3 각호의 훈련사업에 참여하는 훈련기관 및 훈련과정에 대하여 훈련 컨설팅 수행 가능. ② 심사평가기관의 장은 다음을 모두 포함한 컨설팅 계획 [세부-훈련 컨설팅 계획 포함사항]을 고용노동부장관과 사전에 협의해야.", "m": [{"s": 110, "e": 129, "t": "[세부-훈련 컨설팅 계획 포함사항]", "n": "세부-훈련 컨설팅 계획 포함사항"}], "c": false}, {"t": "", "m": [], "c": false}, {"t": "■ 제3장 보칙 (원문 장번호 표기 그대로)", "m": [], "c": false}, {"t": "§38(유관기관 간 업무협조) ① 심사평가기관의 장은 §4①에 따라 법§7의2 각 호의 업무 수행에 필요한 경우 한국산업인력공단, 한국고용정보원 등에 관련 자료의 제공, 회의 참석, 전산시스템 개편 등의 협조 요청 가능. ② ①에 따라 심사평가기관으로부터 업무협조 요청을 받은 유관기관의 장은 이에 적극 협조해야.", "m": [], "c": false}, {"t": "§39(심사평가정보시스템 구축ㆍ운영) 고용노동부장관은 법§7의2 각 호의 업무를 효과적으로 수행하기 위해 훈련과정, 훈련기관 등의 정보를 체계적으로 관리하기 위한 훈련기관 등록ㆍ관리시스템 등을 HRD-Net과 연계하여 구축ㆍ운영 가능.", "m": [], "c": false}, {"t": "§40(연간 사업계획 보고 등) ① 심사평가기관의 장은 심사 대행기관의 예산, 인력운영 등을 포함한 다음 연도 업무추진계획을 전년도 12월 31일까지 고용노동부장관에게 보고해야. ② 심사평가기관의 장은 §11 및 §18 등에 따른 심사ㆍ평가기준을 변경할 때는 사전에 고용노동부장관의 승인을 받아야. ③ 한국산업인력공단은 민간 학습관리시스템 임대 지원 사업의 공급업체 공모 및 비용지원에 관한 내용을 포함한 업무추진계획을 전년도 12월 31일까지 고용노동부 장관에게 보고해야.", "m": [], "c": false}, {"t": "§41(재검토기한) 고용노동부장관은 「훈령ㆍ예규 등의 발령 및 관리에 관한 규정」에 따라 이 고시에 대하여 2026년 1월 1일 기준으로 매 3년이 되는 시점(매 3년째의 12월 31일까지를 말한다)마다 그 타당성을 검토하여 개선 등의 조치를 해야.", "m": [], "c": false}, {"t": "", "m": [], "c": false}, {"t": "■ [별표 1] 심사평가위원 서약서 (각 호 주어 = 심사평가위원) [세부-심사평가위원 서약서] — 수신: 한국기술교육대학교 직업능력심사평가원장 귀하.", "m": [{"s": 38, "e": 53, "t": "[세부-심사평가위원 서약서]", "n": "세부-심사평가위원 서약서"}], "c": false}, {"t": "", "m": [], "c": false}, {"t": "■ 부칙 \u003c제2017-14호, 2017. 2. 17.> · \u003c제2020-65호, 2020. 1. 31.> · \u003c제2020-115호, 2020. 8. 25.> · (인용조문 정비를 위한 19개 고용노동부고시 일괄개정고시) \u003c제2022-18호, 2022. 2. 17.> · \u003c제2022-86호, 2022. 12. 19.> · \u003c제2026-40호, 2026. 5. 11.> · \u003c제2026-56호, 2026. 8. 1.> [세부-부칙]", "m": [{"s": 233, "e": 240, "t": "[세부-부칙]", "n": "세부-부칙"}], "c": false}, {"t": "", "m": [], "c": false}]}, "details": [{"name": "세부-정의-국가기간ㆍ전략산업직종훈련", "tokens": 60, "text": "1호 국가기간ㆍ전략산업직종훈련 = 법§15 및 「고용보험법」§31②에 따라 고용노동부장관이 산업현장에서 필요로 하는 인력을 양성ㆍ공급하는 훈련\n"}, {"name": "세부-정의-직업능력개발계좌제훈련", "tokens": 57, "text": "2호 직업능력개발계좌제훈련 = 법§18 또는 「고용보험법」§29에 따라 실업자, 자영업자 등의 자율적인 직업능력개발을 지원하기 위하여 실시하는 훈련\n"}, {"name": "세부-정의-근로자직업능력개발훈련", "tokens": 69, "text": "3호 근로자직업능력개발훈련 = 법§17·19 및 「고용보험법」§29에 따라 중소기업 근로자 및 비정규직 근로자 등의 자율적인 직업능력개발을 지원하기 위하여 실시하는 훈련\n"}, {"name": "세부-정의-사업주직업능력개발훈련", "tokens": 63, "text": "4호 사업주직업능력개발훈련 = 법§20 및 「고용보험법」§27에 따라 사업주가 소속 근로자 등을 대상으로 직업능력개발훈련을 실시하는 경우 그 비용을 지원하는 훈련\n"}, {"name": "세부-정의-국가인적자원개발컨소시엄지원훈련", "tokens": 107, "text": "5호 국가인적자원개발컨소시엄지원훈련 = 「고용보험법」§31, 같은 법 시행령§52①6호 및 법§20에 따라 사업주, 사업주단체 등이 상대적으로 훈련기회가 적은 중소기업들과 훈련 컨소시엄을 구성하여 공동훈련을 실시하는 경우 시설ㆍ장비비, 훈련비 등을 지원하는 훈련\n"}, {"name": "세부-정의-훈련기관 평가", "tokens": 88, "text": "6호 훈련기관 평가 = 훈련기관의 건전성, 훈련기관역량(훈련 실시능력, 훈련성과, 수요자 만족도 등)을 검증하여 정부위탁 훈련과정을 운영할 수 있는 기관인지 여부를 사전 또는 사후에 평가하는 절차\n"}, {"name": "세부-정의-훈련과정 심사", "tokens": 85, "text": "7호 훈련과정 심사 = 훈련과정의 적정성, 훈련시설ㆍ장비 등 인프라의 적정성, 교ㆍ강사의 적정성, 지역ㆍ산업의 훈련수요 등을 반영하여 정부위탁훈련과정으로 적합한 훈련과정을 선정하기 위한 절차\n"}, {"name": "세부-정의-외국어훈련과정", "tokens": 59, "text": "8호 외국어훈련과정 = 근로자직업능력개발훈련 및 사업주 직업능력개발훈련 과정 중 직무와 관련한 어학능력개발 및 향상을 위해 실시하는 훈련과정\n"}, {"name": "세부-정의-원격훈련", "tokens": 69, "text": "9호 원격훈련 = 정보통신매체를 활용하여 훈련이 실시되거나 인쇄매체로 된 훈련교재를 이용하여 훈련이 실시되고, 훈련생 관리 등이 웹상으로 이루어지는 직업능력개발훈련\n"}, {"name": "세부-정의-자체훈련", "tokens": 62, "text": "10호 자체훈련 = 사업주가 자사의 훈련인프라, 교ㆍ강사 등 인력을 활용하여 훈련계획 수립, 훈련실시, 훈련생관리 등을 직접 수행하는 직업능력개발훈련\n"}, {"name": "세부-정의-훈련과정 성과평가", "tokens": 81, "text": "11호 훈련과정 성과평가 = 훈련이 목표한 성과를 달성했는지 여부를 훈련생의 역량획득 여부, 훈련과정 평가계획 수립 및 시행, 훈련기관의 평가체계 등을 검증하여 평가하는 절차\n"}, {"name": "세부-정의-국가직무능력표준", "tokens": 61, "text": "12호 국가직무능력표준(이하 \"NCS\") = 산업현장에서 직무를 수행하기 위하여 요구되는 지식ㆍ기술ㆍ소양 등의 내용을 국가가 산업부문별ㆍ수준별로 체계화한 것\n"}, {"name": "세부-정의-신규훈련기관", "tokens": 32, "text": "13호 신규훈련기관 = §3 각 호의 훈련사업의 훈련실적이 없는 훈련기관\n"}, {"name": "세부-정의-중앙행정기관 및 자치단체 인력양성ㆍ훈련사업", "tokens": 52, "text": "14호 중앙행정기관 및 자치단체 인력양성ㆍ훈련사업 = 중앙행정기관 및 자치단체가 공공 또는 민간기관 등을 활용하여 직ㆍ간접적으로 운영하는 직업능력개발사업\n"}, {"name": "세부-정의-훈련사업 성과평가", "tokens": 53, "text": "15호 훈련사업 성과평가 = 사업수행역량 및 실적, 훈련사업의 성과목표 달성여부 등을 정량과 정성으로 구분하여 검증하는 평가절차\n"}, {"name": "세부-정의-민간 학습관리시스템 임대 지원", "tokens": 74, "text": "16호 민간 학습관리시스템 임대 지원 = 훈련기관이 온ㆍ오프라인 혼합훈련 운영을 위해 필요한 민간 학습관리시스템을 임대하여 구축ㆍ운영할 수 있도록 공급업체를 공모하고 그 비용을 지원하는 것\n"}, {"name": "세부-정의-훈련 컨설팅", "tokens": 74, "text": "17호 훈련 컨설팅 = 훈련기관의 직업능력개발훈련 품질향상 및 훈련역량 강화에 필요한 사항을 진단하고 훈련방법의 개선 등 훈련품질의 향상을 지원하는 것\n"}, {"name": "세부-심사평가위원 위촉 자격요건", "tokens": 155, "text": "§6① 심사평가위원 위촉 대상:\n1호 관련분야 박사학위 소지자, 기술사 또는 기능장 보유자 / 2호 관련분야 석사학위 이상인 자로 3년 이상의 실무경력이 있는 자 / 3호 관련분야 학계 및 연구기관 전문가로 실무경력이 5년 이상인 자 / 4호 관련분야 산업계 전문가로 현장ㆍ실무경력이 5년 이상인 자 / 5호 기타 심사평가 업무를 수행할 수 있는 자격이 있다고 심사평가기관의 장이 인정하는 자\n"}, {"name": "세부-기관평가 계획 포함사항", "tokens": 59, "text": "§11① 다음연도 평가계획 포함사항:\n1호 평가 대상 및 선정 기준 / 2호 평가 추진일정 / 3호 평가 기준 / 4호 그밖에 평가에 필요한 사항\n"}, {"name": "세부-기관평가 등급별 유효기간", "tokens": 117, "text": "§14① 평가등급별 기관평가 효력 유효기간:\n1호 일반(3년): 평가 결과 확정일로부터 3년 후 평가 결과 확정일까지 / 2호 신규(1년): 평가 결과 확정일로부터 1년 후 평가 결과 확정일까지 / 3호 미흡: 평가 결과 확정일로부터 1호 또는 2호의 평가등급을 새로이 부여받는 날까지\n"}, {"name": "세부-훈련과정 심사계획 포함사항", "tokens": 83, "text": "§18 세부적인 심사계획 포함사항:\n1호 훈련과정 심사대상 / 2호 훈련과정 심사기준 / 3호 훈련과정 심사일정 및 절차 / 4호 심사 신청제한분야 / 5호 그밖에 심사에 필요한 사항\n"}, {"name": "세부-성과평가 계획 포함사항", "tokens": 73, "text": "§24 다음연도 훈련과정 또는 훈련사업 성과평가계획 포함사항:\n1호 성과평가 대상 선정기준 / 2호 성과평가 추진일정 및 절차 / 3호 성과평가 기준 / 4호 그 밖에 성과평가에 필요한 사항\n"}, {"name": "세부-훈련 컨설팅 계획 포함사항", "tokens": 85, "text": "§37의2② 컨설팅 계획 포함사항(모두 포함):\n1호 컨설팅의 대상 / 2호 컨설팅의 절차, 방법, 범위 및 내용 / 3호 컨설팅 결과 활용 / 4호 그 밖에 컨설팅에 필요한 사항\n"}, {"name": "세부-심사평가위원 서약서", "tokens": 611, "text": "[별표 1] 심사평가위원 서약서 (각 호 주어 = 심사평가위원)\n본인은 「직업능력개발훈련 품질관리에 관한 규정」§6에 따라 위촉된 심사평가위원으로서 직무를 성실하게 수행하고, 다음 각 호의 내용을 충분히 숙지하여 준수할 것을 서약합니다.\n(호번호 없이 시작) 공정하게 직무를 수행하고, 향응·금품 등을 수수하거나 청탁·알선 행위, 권위적·고압적, 불성실 태도 등 품위를 손상하는 행위를 하지 않는다.\n2. 심사평가위원의 위촉 및 심사평가 참여 여부, 심사평가위원으로서 직무를 수행하거나 위촉기간 중 알게 된 비밀(개인정보 및 보안사항 포함)를 한국기술교육대학교 직업능력심사평가원(이하 심평원)의 사전승인 없이 외부(제3자)에 누설?유포하지 않는다. 단, 부패행위 신고는 예외로 한다.\n3. 심사평가위원으로서 직무를 수행하거나 위촉기간 중 알게 된 정보를 개인적인 목적으로 활용하거나 보관하지 않는다.\n4. 심사평가 대상 훈련기관과 관련하여 본인 또는 친인척 등 이해관계인에게 이익이 될 수 있는 활동(강의, 용역, 컨설팅, 운영, 자문 등)에 참여하지 않는다.\n5. 심사평가 대상 훈련기관이 본인 및 친인척, 본인이 속한 단체 및 기관 등과 이해관계가 있는 경우, 심사평가기관의 장에게 자진신고하고 회피하여야 한다.\n6. 심사평가위원으로서 활동에 필요한 교육에 반드시 참여하고, 심사평가 배정 등의 절차에 대해서는 심평원에 이의를 제기하지 않는다.\n7. 심사평가위원으로서 관계법령, 상기 내용과 심평원이 추가 요구하는 준수사항을 위반한 경우, 이에 따른 재교육, 자격정지?종료, 해촉 등을 겸허히 수용한다. 특히 관계법령이나 규정에 대한 중대한 위반이 있을 경우 행정적?법적 책임을 부담할 수 있음을 확인한다.\n서식란: 년 월 일 / 서약자 ; (서명 또는 인) / 생년월일 ; / 주소 ;\n수신: 한국기술교육대학교 직업능력심사평가원장 귀하\n"}, {"name": "세부-부칙", "tokens": 654, "text": "\u003c제2017-14호, 2017. 2. 17.> §1(시행일) 발령한 날부터 시행. §2(경과 규정) 이 규정 시행일 이전에 「직업능력개발 훈련기관 평가에 관한 규정」 등에 따라 이루어진 훈련기관 인증평가 등급, 훈련과정 심사 및 성과평가, 우수훈련기관 지정 등은 이 고시에 의한 것으로 본다. §3(다른 규정의 폐지) ① 이 고시의 시행일로부터 「직업능력개발 훈련기관 평가에 관한 규정」(고용노동부 예규 86호) 폐지. ② 이 고시의 시행일로부터 「실업자등 직업능력개발훈련 실시규정」§30·31 및 「사업주 직업능력개발훈련 지원규정」§24 삭제.\n\u003c제2020-65호, 2020. 1. 31.> §1(시행일) 발령한 날부터 시행. §2(경과조치) 이 고시 시행 당시 종전의 규정에 의하여 이루어진 훈련기관 인증평가 등급 및 유효기간, 훈련과정 심사, 훈련과정 및 훈련사업에 대한 성과평가, 우수훈련기관 선정 등은 이 고시에 의한 것으로 본다.\n\u003c제2020-115호, 2020. 8. 25.> §1(시행일) 발령한 날부터 시행. §2(경과조치) 제2020-65호 부칙§2와 동일.\n(인용조문 정비를 위한 19개 고용노동부고시 일괄개정고시) \u003c제2022-18호, 2022. 2. 17.> 2022년 2월 18일부터 시행.\n\u003c제2022-86호, 2022. 12. 19.> §1(시행일) 공포한 날부터 시행. §2(경과조치) 제2020-65호 부칙§2와 동일하되 \"훈련과정 심사\" 제외.\n\u003c제2026-40호, 2026. 5. 11.> §1(시행일) 2026년 5월 11일부터 시행.\n\u003c제2026-56호, 2026. 8. 1.> §1(시행일) 2026년 8월 1일부터 시행.\n"}], "stats": {"n_detail": 25, "main_tokens": 8250, "detail_tokens_total": 2983, "detail_tokens_mean": 119.3, "detail_tokens_min": 32, "detail_tokens_max": 654, "all_tokens": 11233}, "questions": [{"q": "훈련기관 평가에서 '일반' 등급을 받으면 유효기간이 얼마이고, 우수훈련기관으로 선정되면 유효기간을 최대 얼마나 더 받을 수 있어?", "picked": ["세부-기관평가 등급별 유효기간"], "why": null, "answer": "일반 3년(§14①1호) / 우수훈련기관 최대 2년 추가(§30②)", "gold": null, "verdict": "정답", "no_context": "UNKNOWN", "control": "★답을 냈다 — 원문 §13③ 이 등급 이름을 '일반(3년)' 으로 써서 이름에 값이 박혀 있다", "picked_tokens": 117, "eff_tokens": 8367, "eff_pct": 72.0, "note": "라우팅 정밀도(25개 중 1개)는 보였으나 세부의 필요성은 못 보였다. 질문 선정 실패", "kind": "한계", "anchors": [{"name": "세부-기관평가 등급별 유효기간", "line": 41, "mark": 0}]}, {"q": "'원격훈련'과 '자체훈련'은 각각 무슨 뜻이야?", "picked": ["세부-정의-원격훈련", "세부-정의-자체훈련"], "why": "메인 §2는 각 호 용어명만 나열하고 정의문은 [세부-정의-\u003c용어>]에 있다고 규약에 명시되어 있어…", "answer": "§2 9호·10호 정의문 정확 인용", "gold": null, "verdict": "정답", "no_context": "일반 지식으로 근사 답변 — 이 용어들은 일반 직업훈련 용어라 파라메트릭으로 근사 가능", "control": "일반 지식으로 근사했으나 '해당 고시상의 정확한 정의문 문구는 이 캐시로는 확인 불가(UNKNOWN)' 라고 명시", "picked_tokens": 131, "eff_tokens": 8381, "eff_pct": 72.1, "note": "★다중 라우팅(2개)이 실제로 돌았고 [정] 규약 표시를 따라갔다. 단 사후 선정이라 정확도 근거로 못 씀", "kind": "한계", "anchors": [{"name": "세부-정의-원격훈련", "line": 9, "mark": 8}, {"name": "세부-정의-자체훈련", "line": 9, "mark": 9}]}]}, {"id": "chat", "label": "챗봇대화", "source": "주식 상담 8턴 · 허구 종목 · 자체 저작", "warn": "우리가 저작한 재료다. 잉여 밀도를 우리가 심었으므로 압축률을 외부 재료 셋과 나란히 비교하면 안 된다.", "tokens": {"source": 5756, "refined": 2418, "main": 993, "detail_all": 2186, "dist_all": 3179}, "ratios": {"refined": 42.0, "dist_all": 55.2, "resident": 17.3}, "kv": {"source": 67.45, "refined": 28.34, "resident": 11.64}, "cost": 31.5, "main": {"tokens": 993, "lines": [{"t": "[주식 상담 챗봇 대화 로그 · 세션 2026-07-28 20:14~21:37 · 사용자 ID u-88214]", "m": [], "c": false}, {"t": "", "m": [], "c": false}, {"t": "[규약] YYYYQn=YYYY년 n분기 · x→y=변화 전→후 · 금액/비율 앞 -=마이너스 +=플러스", "m": [], "c": true}, {"t": "[기준] 재무수치=2026Q2 보고서(2026-08-14 공시 예정분 제외, 직전 확정치) · 시장데이터=2026-07-25 종가", "m": [], "c": false}, {"t": "[고지] 각 턴 챗봇 답변 말미 8회 반복: \"투자 판단의 최종 책임은 투자자 본인에게 있으며, 본 정보는 투자 권유가 아닙니다.\"", "m": [], "c": false}, {"t": "[세부 규약] 종목마다 세부 파일 셋 — [세부-\u003c종목명>-종목정보] · [세부-\u003c종목명>-보유평가] · [세부-\u003c종목명>-배경]. 본문에서는 [정보] · [보유] · [배경] 으로만 표시.", "m": [{"s": 0, "e": 7, "t": "[세부 규약]", "n": null}, {"s": 80, "e": 84, "t": "[정보]", "n": null}, {"s": 87, "e": 91, "t": "[보유]", "n": null}, {"s": 94, "e": 98, "t": "[배경]", "n": null}], "c": true}, {"t": "", "m": [], "c": false}, {"t": "[턴별 사용자 질문]", "m": [], "c": false}, {"t": "1 4종목 보유, 하반기 정리 고민→각 회사 개요 요청 — 보유 4종목 각각의 시장 · 사업 · 매출(2026Q2, 억 원) · 영업이익(2026Q2, 억 원) · 영업이익률 · 종가(2026-07-25, 원) · 시가총액 · PER · PBR: 한밭정밀소재(042690) [정보] · 미르반도체(109820) [정보] · 세림바이오로직스(317450) [정보] · 온누리케미칼(285530) [정보]", "m": [{"s": 153, "e": 157, "t": "[정보]", "n": "세부-한밭정밀소재-종목정보"}, {"s": 174, "e": 178, "t": "[정보]", "n": "세부-미르반도체-종목정보"}, {"s": 198, "e": 202, "t": "[정보]", "n": "세부-세림바이오로직스-종목정보"}, {"s": 220, "e": 224, "t": "[정보]", "n": "세부-온누리케미칼-종목정보"}], "c": false}, {"t": "2 매수단가·수량 제시, 평가손익 문의 — 종목별 매수단가(원) · 수량(주) · 매수금액 · 평가금액 · 평가손익 · 수익률: 한밭정밀소재 [보유] · 미르반도체 [보유] · 세림바이오로직스 [보유] · 온누리케미칼 [보유] / 4종목 합산 매수금액 5,048만4천 원 · 평가금액 5,037만7천 원 · 평가손익 -10만7천 원 · 수익률 -0.2%(종가 기준일 2026-07-25)", "m": [{"s": 79, "e": 83, "t": "[보유]", "n": "세부-한밭정밀소재-보유평가"}, {"s": 92, "e": 96, "t": "[보유]", "n": "세부-미르반도체-보유평가"}, {"s": 108, "e": 112, "t": "[보유]", "n": "세부-세림바이오로직스-보유평가"}, {"s": 122, "e": 126, "t": "[보유]", "n": "세부-온누리케미칼-보유평가"}], "c": false}, {"t": "3 세림바이오로직스 적자 이유·계속 적자였는지 [배경]", "m": [{"s": 26, "e": 30, "t": "[배경]", "n": "세부-세림바이오로직스-배경"}], "c": false}, {"t": "4 미르반도체가 오른 이유 [배경]", "m": [{"s": 15, "e": 19, "t": "[배경]", "n": "세부-미르반도체-배경"}], "c": false}, {"t": "5 온누리케미칼, PBR 낮으면 싼 것인지 [배경]", "m": [{"s": 24, "e": 28, "t": "[배경]", "n": "세부-온누리케미칼-배경"}], "c": false}, {"t": "6 한밭정밀소재가 빠진 이유 [배경]", "m": [{"s": 16, "e": 20, "t": "[배경]", "n": "세부-한밭정밀소재-배경"}], "c": false}, {"t": "7 제일 위험한 종목+세림바이오로직스 제3공장 가동 시점 [배경]", "m": [{"s": 32, "e": 36, "t": "[배경]", "n": "세부-세림바이오로직스-배경"}], "c": false}, {"t": "8 전체 요약", "m": [], "c": false}, {"t": "", "m": [], "c": false}, {"t": "#리스크 순위 1 세림바이오로직스 > 2 미르반도체 > 3 한밭정밀소재 > 4 온누리케미칼(가장 안정)", "m": [], "c": false}, {"t": "세림바이오로직스: 7개 분기 연속 적자, PBR이 네 종목 중 최고, 제3공장 가동 지연 시 적자 기간 장기화, 평가손실 네 종목 중 최대.", "m": [], "c": false}, {"t": "미르반도체: 실적·주가는 좋으나 단일 고객사 비중 상승으로 고객사 발주 변동에 취약.", "m": [], "c": false}, {"t": "한밭정밀소재: 전방 수요 둔화와 판가 하락 동시 진행, 배터리 3사 향 매출 비중 높아 분산 미흡.", "m": [], "c": false}, {"t": "온누리케미칼: PER·PBR 밸류에이션 부담 낮음, 다만 부채비율과 울산 2공장 설비투자가 부담 요인.", "m": [], "c": false}, {"t": "", "m": [], "c": false}]}, "details": [{"name": "세부-한밭정밀소재-종목정보", "tokens": 141, "text": "한밭정밀소재(042690) · 시장 코스닥 · 사업 2차전지 양극재용 전구체 생산 소재 · 2026Q2 매출 3,182억 원 · 2026Q2 영업이익 214억 원 · 영업이익률 6.7% · 2026-07-25 종가 28,450원 · 시가총액 1조 2,400억 원 · PER 18.2배 · PBR 1.94배\n"}, {"name": "세부-미르반도체-종목정보", "tokens": 134, "text": "미르반도체(109820) · 시장 코스피 · 사업 반도체 후공정 테스트 장비 · 2026Q2 매출 5,470억 원 · 2026Q2 영업이익 892억 원 · 영업이익률 16.3% · 2026-07-25 종가 61,200원 · 시가총액 3조 800억 원 · PER 12.4배 · PBR 2.31배\n"}, {"name": "세부-세림바이오로직스-종목정보", "tokens": 143, "text": "세림바이오로직스(317450) · 시장 코스닥 · 사업 항체의약품 위탁생산(CDMO) · 2026Q2 매출 1,240억 원 · 2026Q2 영업이익 -88억 원(적자) · 영업이익률 -7.1% · 2026-07-25 종가 44,900원 · 시가총액 2조 1,500억 원 · PER 적자로 미산출 · PBR 4.62배\n"}, {"name": "세부-온누리케미칼-종목정보", "tokens": 129, "text": "온누리케미칼(285530) · 시장 코스피 · 사업 정밀화학 중간체 생산 · 2026Q2 매출 8,910억 원 · 2026Q2 영업이익 403억 원 · 영업이익률 4.5% · 2026-07-25 종가 17,350원 · 시가총액 9,800억 원 · PER 9.8배 · PBR 0.71배\n"}, {"name": "세부-한밭정밀소재-보유평가", "tokens": 105, "text": "한밭정밀소재 매수단가 31,200원 · 수량 400주 · 매수금액 1,248만 원 · 평가금액 1,138만 원 · 평가손익 -110만 원 · 수익률 -8.8% (평가금액 · 평가손익 · 수익률은 2026-07-25 종가 기준)\n"}, {"name": "세부-미르반도체-보유평가", "tokens": 105, "text": "미르반도체 매수단가 52,800원 · 수량 250주 · 매수금액 1,320만 원 · 평가금액 1,530만 원 · 평가손익 +210만 원 · 수익률 +15.9% (평가금액 · 평가손익 · 수익률은 2026-07-25 종가 기준)\n"}, {"name": "세부-세림바이오로직스-보유평가", "tokens": 112, "text": "세림바이오로직스 매수단가 58,300원 · 수량 180주 · 매수금액 1,049만4천 원 · 평가금액 808만2천 원 · 평가손익 -241만2천 원 · 수익률 -23.0% (평가금액 · 평가손익 · 수익률은 2026-07-25 종가 기준)\n"}, {"name": "세부-온누리케미칼-보유평가", "tokens": 109, "text": "온누리케미칼 매수단가 15,900원 · 수량 900주 · 매수금액 1,431만 원 · 평가금액 1,561만5천 원 · 평가손익 +130만5천 원 · 수익률 +9.1% (평가금액 · 평가손익 · 수익률은 2026-07-25 종가 기준)\n"}, {"name": "세부-세림바이오로직스-배경", "tokens": 386, "text": "세림바이오로직스 2024Q3까지 흑자 기조(2024Q3 영업이익 62억 원). 2024Q4 인천 송도 제3공장 증설 착수로 감가상각비·인건비 크게 증가. 제3공장=총 투자금액 4,200억 원, 2026Q4 가동 목표.\n증설 착수 후 세림바이오로직스 분기 영업이익[억 원]: 2024Q4 -15 / 2025Q1 -41 / 2025Q2 -66 / 2025Q3 -72 / 2025Q4 -95 / 2026Q1 -103 / 2026Q2 -88 → 7개 분기 연속 적자\n2026Q2 적자 폭이 2026Q1 대비 소폭 줄어든 것은 신규 수주 2건이 매출로 인식되기 시작했기 때문. 그 2건=유럽 소재 제약사와 체결, 계약 규모 각각 1,850억 원·970억 원, 인식 기간 2026Q2~2029Q4.\n판단: 세림바이오로직스 적자는 업황 악화가 아니라 증설 투자에 따른 고정비 선반영 성격이 큼. 리스크는 제3공장 가동 지연 시 적자 기간 장기화.\n"}, {"name": "세부-미르반도체-배경", "tokens": 322, "text": "미르반도체 주가 상승의 직접 계기=2026-05-12 공시 대형 수주. 북미 소재 파운드리 업체와 HBM 테스트 장비 공급 계약, 계약 금액 7,300억 원 — 미르반도체 2025년 연간 매출액 1조 8,200억 원의 40.1%. 납품 기간 2026Q3~2028Q2.\n미르반도체 주가: 공시 직전 2026-05-11 종가 43,750원 → 공시 다음 거래일 2026-05-13 종가 50,300원(하루 15.0% 상승) → 이후 2026-07-25까지 추가 21.7% 상승(2026-07-25 종가 61,200원).\n유의점: 이 수주로 단일 고객사 비중 상승. 미르반도체 최대 고객사 매출 비중 2025년 기준 28.4% → 수주 반영 시 2027년 기준 41.2%(회사 측 추정)로 고객사 발주 변동에 취약.\n"}, {"name": "세부-온누리케미칼-배경", "tokens": 235, "text": "온누리케미칼 PBR 0.71배(2026-07-25 종가 기준)는 장부가 대비 29% 할인 수준. 동종 정밀화학 업종의 2026년 7월 평균 PBR 1.12배 대비로도 낮음.\n낮은 이유: 울산 2공장 노후 설비 교체를 미뤄 왔고 관련 예상 투자금액 2,600억 원 추정, 2027~2029년 집행 예정이며 그 기간 감가상각비 증가 예상. 온누리케미칼 2026Q2 부채비율 178.4%로 업종 평균 121.6%보다 높음.\n판단: 단순 저평가라기보다 설비투자 부담과 재무구조에 대한 시장의 할인이 반영된 수치.\n"}, {"name": "세부-한밭정밀소재-배경", "tokens": 265, "text": "한밭정밀소재 하락 배경 ① 전방 수요 둔화: 매출에서 국내 배터리 3사 향 비중 71.3%인데 이 3사의 2026년 상반기 합산 출하량이 전년 동기 대비 12.4% 감소. 이에 한밭정밀소재 2026Q2 매출액도 전년 동기 3,640억 원 대비 12.6% 감소.\n② 판가 하락: 전구체 판가는 리튬 가격에 연동. 2026년 상반기 평균 탄산리튬 가격 톤당 9만 4천 위안으로 2025년 상반기 평균 13만 2천 위안 대비 28.8% 하락.\n대응: 2026Q3부터 나트륨이온 배터리용 전구체 시험 생산 시작(회사 발표). 초기 생산능력 연 4천 톤, 양산 목표 시점 2027Q2.\n"}], "stats": {"n_detail": 12, "main_tokens": 993, "detail_tokens_total": 2186, "detail_tokens_mean": 182.2, "detail_tokens_min": 105, "detail_tokens_max": 386, "all_tokens": 3179}, "questions": [{"q": "미르반도체가 받은 북미 파운드리 수주 계약 금액이 얼마였고, 그게 2025년 연간 매출액의 몇 %였지?", "picked": ["세부-미르반도체-배경"], "why": "턴 4 '미르반도체가 오른 이유'가 [배경]으로 표시되어 있고, 수주 계약 금액과 매출 대비 비중은 종목정보(재무·시장데이터)나 보유평가(매수단가·손익)가 아니라 배경 파일에만 있을 항목이기 때문", "answer": "계약 금액 7,300억 원. 2025년 연간 매출액 1조 8,200억 원의 40.1%.", "gold": "7,300억 원 · 40.1%", "verdict": "정답 (두 값 모두)", "no_context": "UNKNOWN", "control": "UNKNOWN — 메인에는 [배경] 파일이 있다는 표시만 있고 두 값이 없다", "picked_tokens": 322, "eff_tokens": 1315, "eff_pct": 22.8, "note": null, "kind": "한계", "anchors": [{"name": "세부-미르반도체-배경", "line": 11, "mark": 0}]}]}, {"id": "chat_th", "label": "챗봇 갱신후", "source": "위 대화 + 갱신 6턴 · 임계에서 통째로 재정제·재분배", "warn": "같은 자체 저작 재료의 갱신 라운드다. 대푯값이 아니다.", "tokens": {"source": 8889, "refined": 4111, "main": 1702, "detail_all": 2834, "dist_all": 4536}, "ratios": {"refined": 46.2, "dist_all": 51.0, "resident": 19.1}, "kv": {"source": 104.17, "refined": null, "resident": 19.95}, "cost": 10.3, "main": {"tokens": 1702, "lines": [{"t": "[주식 상담 챗봇 대화 로그 · 세션 2026-07-28 20:14~21:37 · 사용자 ID u-88214 · 갱신 시점 2026-07-28 21:37]", "m": [], "c": false}, {"t": "", "m": [], "c": false}, {"t": "[규약] x→y=변화 전→후 · +/- =금액·비율 앞 플러스/마이너스 · YYYYQn=YYYY년 n분기", "m": [], "c": true}, {"t": "세부 파일 셋: 종목마다 [세부-\u003c종목명>-종목정보]·[세부-\u003c종목명>-보유평가]·[세부-\u003c종목명>-배경], 본문 표시는 [정보]·[보유]·[배경]", "m": [{"s": 68, "e": 72, "t": "[정보]", "n": null}, {"s": 73, "e": 77, "t": "[보유]", "n": null}, {"s": 78, "e": 82, "t": "[배경]", "n": null}], "c": true}, {"t": "[기준] 재무수치=2026Q2 보고서(2026-08-14 공시 예정분 제외, 직전 확정치) · 시장데이터=2026-07-25 종가", "m": [], "c": false}, {"t": "[고지] 챗봇 답변 말미 반복(턴1~8 8회, 턴9~14 각 턴 1회): \"투자 판단의 최종 책임은 투자자 본인에게 있으며, 본 정보는 투자 권유가 아닙니다.\"", "m": [], "c": false}, {"t": "", "m": [], "c": false}, {"t": "[턴별 사용자 질문]", "m": [], "c": false}, {"t": "1 4종목 보유, 하반기 정리 고민→각 회사 개요 요청 — 한밭정밀소재(042690) [정보] · 미르반도체(109820) [정보] · 세림바이오로직스(317450) [정보] · 온누리케미칼(285530) [정보]", "m": [{"s": 48, "e": 52, "t": "[정보]", "n": "세부-한밭정밀소재-종목정보"}, {"s": 69, "e": 73, "t": "[정보]", "n": "세부-미르반도체-종목정보"}, {"s": 93, "e": 97, "t": "[정보]", "n": "세부-세림바이오로직스-종목정보"}, {"s": 115, "e": 119, "t": "[정보]", "n": "세부-온누리케미칼-종목정보"}], "c": false}, {"t": "2 매수단가·수량 제시, 평가손익 문의 — 한밭정밀소재 [보유] · 미르반도체 [보유] · 세림바이오로직스 [보유] · 온누리케미칼 [보유] · 4종목 합산 매수금액 5,048만4천 원 · 평가금액 5,037만7천 원 · 평가손익 -10만7천 원 · 수익률 -0.2%", "m": [{"s": 31, "e": 35, "t": "[보유]", "n": "세부-한밭정밀소재-보유평가"}, {"s": 44, "e": 48, "t": "[보유]", "n": "세부-미르반도체-보유평가"}, {"s": 60, "e": 64, "t": "[보유]", "n": "세부-세림바이오로직스-보유평가"}, {"s": 74, "e": 78, "t": "[보유]", "n": "세부-온누리케미칼-보유평가"}], "c": false}, {"t": "3 세림바이오로직스 적자 이유·계속 적자였는지 [배경]", "m": [{"s": 26, "e": 30, "t": "[배경]", "n": "세부-세림바이오로직스-배경"}], "c": false}, {"t": "4 미르반도체가 오른 이유 [배경]", "m": [{"s": 15, "e": 19, "t": "[배경]", "n": "세부-미르반도체-배경"}], "c": false}, {"t": "5 온누리케미칼, PBR 낮으면 싼 것인지 [배경]", "m": [{"s": 24, "e": 28, "t": "[배경]", "n": "세부-온누리케미칼-배경"}], "c": false}, {"t": "6 한밭정밀소재가 빠진 이유 [배경]", "m": [{"s": 16, "e": 20, "t": "[배경]", "n": "세부-한밭정밀소재-배경"}], "c": false}, {"t": "7 제일 위험한 종목 + 세림바이오로직스 제3공장 가동 시점 [배경]", "m": [{"s": 34, "e": 38, "t": "[배경]", "n": "세부-세림바이오로직스-배경"}], "c": false}, {"t": "8 전체 요약", "m": [], "c": false}, {"t": "9 세림바이오로직스 90주 매도 보고 + 여유자금 생겨 대안전기(067830) 검토 요청 [정보]", "m": [{"s": 50, "e": 54, "t": "[정보]", "n": "세부-대안전기-종목정보"}], "c": false}, {"t": "10 대안전기 실적은 괜찮아 보이는데 왜 저평가인지 [배경]", "m": [{"s": 29, "e": 33, "t": "[배경]", "n": "세부-대안전기-배경"}], "c": false}, {"t": "11 미르반도체 단일 고객사 비중 관련 그 뒤 새 소식 없는지 [배경]", "m": [{"s": 35, "e": 39, "t": "[배경]", "n": "세부-미르반도체-배경"}], "c": false}, {"t": "12 포트폴리오 전체 재계산 요청(대안전기 아직 미매수)", "m": [], "c": false}, {"t": "13 대안전기 편입 시 비중 문의", "m": [], "c": false}, {"t": "14 오늘 바뀐 것만 짧게 정리 요청", "m": [], "c": false}, {"t": "", "m": [], "c": false}, {"t": "[변동] 세림바이오로직스(317450) 일부 매도 — 오늘(세션일 2026-07-28) 90주를 46,100원에 매도. 실현손익 -109만8천 원, 실현수익률 -20.9%. 잔여 90주는 매수단가 불변.", "m": [], "c": false}, {"t": "", "m": [], "c": false}, {"t": "[보유-현재] 턴12 재계산. 한밭정밀소재·미르반도체·온누리케미칼은 매수단가·수량·평가 모두 턴2 [보유]와 동일(변동 없음). 대안전기는 미보유로 제외. 세림바이오로직스 잔여 90주 평가 [보유]", "m": [{"s": 55, "e": 59, "t": "[보유]", "n": "세부-온누리케미칼-보유평가"}, {"s": 106, "e": 110, "t": "[보유]", "n": "세부-세림바이오로직스-보유평가"}], "c": false}, {"t": "현재 보유 4종목 합산: 매수금액 4,523만7천 원 · 평가금액 4,633만6천 원 · 평가손익 +109만9천 원 · 수익률 +2.4%", "m": [], "c": false}, {"t": "누적 손익 = 위 합산 평가손익 + 매도 실현손익 -109만8천 원 = +1천 원, 사실상 원금 수준", "m": [], "c": false}, {"t": "", "m": [], "c": false}, {"t": "[비중] 턴13. 현재 보유 4종목 평가금액 합계 대비: 한밭정밀소재 24.6% · 미르반도체 33.0% · 세림바이오로직스 8.7% · 온누리케미칼 33.7%", "m": [], "c": false}, {"t": "적정 비중은 투자 목적과 위험 감내 수준에 따라 달라지므로 특정 비중은 권유하지 않음.", "m": [], "c": false}, {"t": "현재 포트폴리오는 소재·화학 치우침 — 한밭정밀소재+온누리케미칼 58.3%, 둘 다 원자재 가격에 실적 연동(한밭정밀소재=탄산리튬 가격, 온누리케미칼=정밀화학 원료 가격). 대안전기는 전력기기라 업종은 다르지만 원가 구리 비중(대안전기 [배경])으로 역시 원자재 연동 → 편입해도 원자재 가격 민감도라는 공통 위험은 줄지 않음.", "m": [{"s": 132, "e": 136, "t": "[배경]", "n": "세부-대안전기-배경"}], "c": false}, {"t": "", "m": [], "c": false}, {"t": "[리스크 순위] 1 세림바이오로직스 > 2 미르반도체 > 3 한밭정밀소재 > 4 온누리케미칼(가장 안정)", "m": [], "c": false}, {"t": "세림바이오로직스: 7개 분기 연속 적자, PBR이 네 종목 중 최고, 제3공장 가동 지연 시 적자 기간 장기화, 평가손실 네 종목 중 최대.", "m": [], "c": false}, {"t": "미르반도체: 실적·주가는 좋으나 단일 고객사 비중 상승으로 고객사 발주 변동에 취약.", "m": [], "c": false}, {"t": "한밭정밀소재: 전방 수요 둔화와 판가 하락 동시 진행, 배터리 3사 향 매출 비중 높아 분산 미흡.", "m": [], "c": false}, {"t": "온누리케미칼: PER·PBR 밸류에이션 부담 낮음, 다만 부채비율과 울산 2공장 설비투자가 부담 요인.", "m": [], "c": false}, {"t": "", "m": [], "c": false}, {"t": "[턴14] 오늘 새로 확정·변경된 사항 = 위 [변동] 세림바이오로직스 매도 · 미르반도체 2026-07-22 공시 [배경] · 대안전기 신규 검토·미매수 [정보] · [보유-현재] 합산 평가손익·수익률과 누적 손익. 별도 새 값 없음.", "m": [{"s": 65, "e": 69, "t": "[배경]", "n": "세부-미르반도체-배경"}, {"s": 87, "e": 91, "t": "[정보]", "n": "세부-대안전기-종목정보"}], "c": false}, {"t": "", "m": [], "c": false}]}, "details": [{"name": "세부-한밭정밀소재-종목정보", "tokens": 137, "text": "한밭정밀소재(042690) 코스닥 · 2차전지 양극재용 전구체 생산 소재 · 2026Q2 매출 3,182억 원 · 2026Q2 영업이익 214억 원 · 영업이익률 6.7% · 2026-07-25 종가 28,450원 · 시가총액 1조 2,400억 원 · PER 18.2배 · PBR 1.94배\n"}, {"name": "세부-미르반도체-종목정보", "tokens": 130, "text": "미르반도체(109820) 코스피 · 반도체 후공정 테스트 장비 · 2026Q2 매출 5,470억 원 · 2026Q2 영업이익 892억 원 · 영업이익률 16.3% · 2026-07-25 종가 61,200원 · 시가총액 3조 800억 원 · PER 12.4배 · PBR 2.31배\n"}, {"name": "세부-세림바이오로직스-종목정보", "tokens": 138, "text": "세림바이오로직스(317450) 코스닥 · 항체의약품 위탁생산(CDMO) · 2026Q2 매출 1,240억 원 · 2026Q2 영업이익 -88억(적자) · 영업이익률 -7.1% · 2026-07-25 종가 44,900원 · 시가총액 2조 1,500억 원 · PER 적자로 미산출 · PBR 4.62배\n"}, {"name": "세부-온누리케미칼-종목정보", "tokens": 125, "text": "온누리케미칼(285530) 코스피 · 정밀화학 중간체 생산 · 2026Q2 매출 8,910억 원 · 2026Q2 영업이익 403억 원 · 영업이익률 4.5% · 2026-07-25 종가 17,350원 · 시가총액 9,800억 원 · PER 9.8배 · PBR 0.71배\n"}, {"name": "세부-대안전기-종목정보", "tokens": 158, "text": "대안전기(067830) 코스피 · 배전반·수배전 설비 제조 전력기기 · 2026Q2 매출 2,470억 원 · 2026Q2 영업이익 316억 원 · 영업이익률 12.8% · 2026-07-25 종가 23,700원 · 시가총액 6,400억 원 · PER 11.6배 · PBR 1.38배 · ※턴9~10·14 신규 검토 종목, 아직 미매수(미보유)\n"}, {"name": "세부-한밭정밀소재-보유평가", "tokens": 95, "text": "한밭정밀소재 매수단가 31,200원 · 수량 400주 · 매수금액 1,248만 원 (턴2 시점) · 2026-07-25 종가 기준 평가금액 1,138만 원 · 평가손익 -110만 원 · 수익률 -8.8%\n"}, {"name": "세부-미르반도체-보유평가", "tokens": 95, "text": "미르반도체 매수단가 52,800원 · 수량 250주 · 매수금액 1,320만 원 (턴2 시점) · 2026-07-25 종가 기준 평가금액 1,530만 원 · 평가손익 +210만 원 · 수익률 +15.9%\n"}, {"name": "세부-세림바이오로직스-보유평가", "tokens": 196, "text": "세림바이오로직스 매수단가 58,300원 · 수량 180주 · 매수금액 1,049만4천 원 (턴2 시점) · 2026-07-25 종가 기준 평가금액 808만2천 원 · 평가손익 -241만2천 원 · 수익률 -23.0%\n턴12 재계산 잔여 90주(매수단가 58,300원 불변) 매수금액 524만7천 원 · 2026-07-25 종가 기준 평가금액 404만1천 원 · 평가손익 -120만6천 원 · 수익률 -23.0%\n"}, {"name": "세부-온누리케미칼-보유평가", "tokens": 99, "text": "온누리케미칼 매수단가 15,900원 · 수량 900주 · 매수금액 1,431만 원 (턴2 시점) · 2026-07-25 종가 기준 평가금액 1,561만5천 원 · 평가손익 +130만5천 원 · 수익률 +9.1%\n"}, {"name": "세부-세림바이오로직스-배경", "tokens": 371, "text": "세림바이오로직스는 2024Q3까지 흑자 기조(2024Q3 영업이익 62억 원). 2024Q4 인천 송도 제3공장 증설 착수로 감가상각비·인건비 크게 증가. 제3공장=총 투자금액 4,200억 원, 2026Q4 가동 목표.\n증설 착수 후 분기 영업이익[억 원]: 2024Q4 -15 / 2025Q1 -41 / 2025Q2 -66 / 2025Q3 -72 / 2025Q4 -95 / 2026Q1 -103 / 2026Q2 -88 → 7개 분기 연속 적자\n2026Q2 적자 폭이 2026Q1 대비 소폭 줄어든 것은 신규 수주 2건이 매출로 인식되기 시작했기 때문. 그 2건=유럽 소재 제약사와 체결, 계약 규모 각각 1,850억 원·970억 원, 인식 기간 2026Q2~2029Q4.\n판단: 적자는 업황 악화가 아니라 증설 투자에 따른 고정비 선반영 성격이 큼. 리스크는 제3공장 가동 지연 시 적자 기간 장기화.\n"}, {"name": "세부-미르반도체-배경", "tokens": 512, "text": "미르반도체 주가 상승의 직접 계기=2026-05-12 공시 대형 수주. 북미 소재 파운드리 업체와 HBM 테스트 장비 공급 계약, 계약 금액 7,300억 원 — 미르반도체 2025년 연간 매출액 1조 8,200억 원의 40.1%. 납품 기간 2026Q3~2028Q2.\n주가: 공시 직전 2026-05-11 종가 43,750원 → 공시 다음 거래일 2026-05-13 종가 50,300원(하루 15.0% 상승) → 이후 2026-07-25까지 추가 21.7% 상승.\n유의점: 이 수주로 단일 고객사 비중 상승. 최대 고객사 매출 비중 2025년 기준 28.4% → 북미 수주 반영 시 2027년 기준 41.2%(회사 측 추정)로 고객사 발주 변동에 취약.\n추가 공시(턴11·14) 2026-07-22: 일본 소재 메모리 업체와 웨이퍼 레벨 테스트 장비 공급 계약, 계약 금액 2,100억 원, 납품 기간 2027Q1~2028Q4. 의미=고객사 분산 — 일본 계약을 함께 반영하면 2027년 기준 최대 고객사 매출 비중 추정치 41.2%→36.8%로 회사가 정정 공시.\n다만 이 공시는 2026-07-25 종가에 이미 반영된 것으로 보임 — 공시 당일 2026-07-22 종가 60,850원, 2026-07-25까지 0.6% 상승에 그침.\n"}, {"name": "세부-온누리케미칼-배경", "tokens": 222, "text": "온누리케미칼 PBR(2026-07-25 종가 기준)은 장부가 대비 29% 할인 수준. 동종 정밀화학 업종의 2026년 7월 평균 PBR 1.12배 대비로도 낮음.\n낮은 이유: 울산 2공장 노후 설비 교체를 미뤄 왔고 관련 예상 투자금액 2,600억 원 추정, 2027~2029년 집행 예정이며 그 기간 감가상각비 증가 예상. 2026Q2 부채비율 178.4%로 업종 평균 121.6%보다 높음.\n판단: 단순 저평가라기보다 설비투자 부담과 재무구조에 대한 시장의 할인이 반영된 수치.\n"}, {"name": "세부-한밭정밀소재-배경", "tokens": 259, "text": "한밭정밀소재 하락 배경 ① 전방 수요 둔화: 매출에서 국내 배터리 3사 향 비중 71.3%인데 이 3사의 2026년 상반기 합산 출하량이 전년 동기 대비 12.4% 감소. 이에 2026Q2 매출액도 전년 동기 3,640억 원 대비 12.6% 감소.\n② 판가 하락: 전구체 판가는 리튬 가격에 연동. 2026년 상반기 평균 탄산리튬 가격 톤당 9만 4천 위안으로 2025년 상반기 평균 13만 2천 위안 대비 28.8% 하락.\n대응: 2026Q3부터 나트륨이온 배터리용 전구체 시험 생산 시작(회사 발표). 초기 생산능력 연 4천 톤, 양산 목표 시점 2027Q2.\n"}, {"name": "세부-대안전기-배경", "tokens": 297, "text": "대안전기 실적 대비 저평가(시장 할인) 이유 둘\n① 매출의 계단식 성격: 매출의 63.7%가 국내 데이터센터 신축 프로젝트에서 발생, 프로젝트 단위 수주라 연도별 편차 큼. 연 매출액 2024년 6,120억 원 → 2025년 9,840억 원(60.8% 증가) → 2026년 회사 가이던스 8,900억 원(전년 대비 9.6% 감소).\n② 원가 구조: 배전반 원가에서 구리 비중 31.2%, 2026년 상반기 평균 구리 가격 톤당 1만 1,400달러로 2025년 상반기 평균 9,200달러 대비 23.9% 상승. 회사는 판가 전가율이 약 70% 수준이라고 밝힘.\n즉 PER 11.6배는 실적이 나빠서가 아니라 2026년 역성장 가이던스와 원가 부담이 반영된 수치.\n"}], "stats": {"n_detail": 14, "main_tokens": 1702, "detail_tokens_total": 2834, "detail_tokens_mean": 202.4, "detail_tokens_min": 95, "detail_tokens_max": 512, "all_tokens": 4536}, "questions": [{"q": "미르반도체 북미 파운드리 수주 금액과 2025년 매출 대비 %", "picked": ["세부-미르반도체-배경", "세부-미르반도체-종목정보"], "why": "수주 계약 금액은 … [배경]에, 2025년 연간 매출액은 회사 개요·재무수치를 담은 [종목정보]에 있을 것이므로 둘 다 필요하다", "answer": "7,300억 원 · 1조 8,200억 원의 40.1%", "gold": null, "verdict": "정답", "no_context": "UNKNOWN", "control": "UNKNOWN", "picked_tokens": 642, "eff_tokens": 2344, "eff_pct": 26.4, "note": "라우터가 세부 **2개를 한 번에** 골랐고, 그중 `세부-미르반도체-종목정보`(130t)에는 답에 필요한 두 값(7,300억 · 1조 8,200억)이 하나도 없었다 — 그 파일이 담은 매출은 **2026Q2 분기** 매출이다. **그러나 추론이 엉뚱했던 것이 아니다.** `연간 매출액은 재무수치이니 [종목정보]` 는 이름표대로 읽으면 옳은 판단이고, **분배가 연간 매출액을 비교 문장에 딸려 [배경]으로 보내** 이름표와 값의 위치가 어긋난 것이다. 경계의 모호함은 값 하나가 두 파일에 다 속할 수 있다는 데서 오는 것이라 없앨 수 없다. 눈여겨볼 것은 **방향**이다 — 재현율은 온전했고(필요한 [배경]을 놓치지 않았다), **재시도 라운드 없이 한 번의 판단으로 상위집합을 집어** 답을 완결했다. 대가는 **130토큰 · 1.5%p** — 표의 26.4% 에 이 몫이 **포함돼 있다**(빼면 24.9%). 유리하게 반올림하지 않았다.", "kind": "관찰", "anchors": [{"name": "세부-미르반도체-배경", "line": 11, "mark": 0}, {"name": "세부-미르반도체-종목정보", "line": 8, "mark": 1}]}]}]};
+
+/* ───────────────────────────────── 섹션 전환 */
+const secs  = [...document.querySelectorAll('.sec')];
+const links = [...document.querySelectorAll('.side nav a')];
+
+function show(id, push){
+  const t = secs.find(s => s.id === id) || secs[0];
+  secs.forEach(s => s.classList.toggle('on', s === t));
+  links.forEach(a => a.classList.toggle('on', a.dataset.sec === t.id));
+  if (push && location.hash !== '#' + t.id) history.pushState(null, '', '#' + t.id);
+  document.body.classList.remove('nav');
+  window.scrollTo(0, 0);
+  if (t.id === 'demo') requestAnimationFrame(drawWire);
+}
+links.forEach(a => a.addEventListener('click', e => { e.preventDefault(); show(a.dataset.sec, true); }));
+addEventListener('hashchange', () => show(location.hash.slice(1), false));
+
+/* 섹션 끝의 이전/다음 */
+secs.forEach((s, i) => {
+  const nav = document.createElement('div'); nav.className = 'secnav';
+  const mk = (j, txt) => {
+    if (!secs[j]) return document.createElement('span');
+    const a = document.createElement('a');
+    a.href = '#' + secs[j].id; a.textContent = txt;
+    a.addEventListener('click', e => { e.preventDefault(); show(secs[j].id, true); });
+    return a;
+  };
+  const lbl = j => secs[j] ? (links.find(a => a.dataset.sec === secs[j].id)?.textContent || '') : '';
+  nav.append(mk(i - 1, '← ' + lbl(i - 1)), mk(i + 1, lbl(i + 1) + ' →'));
+  s.append(nav);
+});
+
+/* 표는 가로로 스크롤되게 감싼다 */
+document.querySelectorAll('.sec table').forEach(t => {
+  const w = document.createElement('div'); w.className = 'tablewrap';
+  t.parentNode.insertBefore(w, t); w.append(t);
+});
+
+/* 테마 */
+const themeBtn = document.getElementById('themeBtn');
+themeBtn.addEventListener('click', () => {
+  const cur = document.documentElement.dataset.theme
+    || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+  document.documentElement.dataset.theme = cur === 'dark' ? 'light' : 'dark';
+  drawWire();
+});
+document.getElementById('navToggle').addEventListener('click',
+  () => document.body.classList.toggle('nav'));
+
+/* ───────────────────────────────── 실제 연출 */
+const S = { doc: DATA.docs[0], q: null, step: 5, peek: null };
+const $ = id => document.getElementById(id);
+const num = n => n.toLocaleString('en-US');
+const esc = s => s.replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
+const inl = s => esc(s).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>')
+                       .replace(/`(.+?)`/g, '<code class="mono">$1</code>');
+
+const STEPS = [
+  { n: '원문',    note: '프리필하면 이만큼이 KV 로 상주한다. <b>이 캐시를 버릴 것이다.</b>' },
+  { n: '정제',    note: '같은 내용을 자연어로 다시 쓴다. 중복 진술을 하나로 접는다 — <b>줄어드는 것은 총 저장량</b>이다.' },
+  { n: '분배',    note: '정제본을 <b>메인 하나와 세부 여럿</b>으로 가른다. 메인에 <b>무엇이 어디 있는지</b>를 적는 값이 표시 비용이다.' },
+  { n: '리프리필', note: '나뉜 자연어 파일을 각각 프리필한다. <b>텍스트는 위치가 없어서</b> 붙이는 그 자리에서 만들어진다 — 옮겨 붙일 것이 없으니 RoPE 정렬 문제가 애초에 생기지 않는다.' },
+  { n: '보관',    note: '<b>메인만 상주시킨다.</b> 세부는 내려놓고, 원본 캐시는 버린다.' },
+  { n: '질의',    note: '메인을 읽고 <b>자연어로 판단해</b> 필요한 세부만 가져온다. 검색기도 임베딩도 인덱스도 한 단계도 끼지 않는다.' },
+];
+
+/* 문서 탭 */
+$('docTabs').innerHTML = DATA.docs.map((d, i) =>
+  `<button class="tab${i ? '' : ' on'}" data-i="${i}">${esc(d.label)}</button>`).join('');
+$('docTabs').addEventListener('click', e => {
+  const b = e.target.closest('.tab'); if (!b) return;
+  S.doc = DATA.docs[+b.dataset.i]; S.q = null; S.peek = null; S.step = 5;
+  [...$('docTabs').children].forEach(x => x.classList.toggle('on', x === b));
+  render();
+});
+
+function stepVals(d, q) {
+  const t = d.tokens, r = d.ratios;
+  return [
+    { v: num(t.source) + 't', s: '100%' },
+    { v: num(t.refined) + 't', s: r.refined + '%' },
+    { v: num(t.dist_all) + 't', s: '메인 1 + 세부 ' + d.details.length },
+    { v: (d.details.length + 1) + '회 프리필', s: '자연어 → KV' },
+    { v: num(t.main) + 't', s: '상주 ' + r.resident + '%' },
+    q ? { v: num(q.eff_tokens) + 't', s: '★ ' + q.eff_pct + '%' }
+      : { v: '—', s: '질문을 고르면' },
+  ];
+}
+
+function render() {
+  const d = S.doc, q = S.q;
+  $('srcLine').textContent = '재료 — ' + d.source;
+  $('docWarn').innerHTML = d.warn
+    ? `<div class="warnbar"><span aria-hidden="true">⚠️</span><span><b>주의</b> — ${inl(d.warn)}</span></div>` : '';
+
+  const sv = stepVals(d, q);
+  $('ribbon').innerHTML = STEPS.map((s, i) =>
+    `<li><button class="step${i === S.step ? ' on' : ''}${(i === 4 || i === 5) ? ' hi' : ''}" data-i="${i}">
+       <span class="n">${i + 1}</span><span class="nm">${s.n}</span>
+       <span class="v">${sv[i].v}<br><em>${sv[i].s}</em></span></button></li>`).join('');
+  $('stepNote').innerHTML = `<b>${S.step + 1}. ${STEPS[S.step].n}</b> — ${STEPS[S.step].note}`;
+
+  $('qRow').innerHTML = d.questions.map((x, i) =>
+    `<button class="qbtn${q === x ? ' on' : ''}" data-i="${i}">${x.note
+        ? (x.kind === '관찰' ? '<span aria-hidden="true">◆</span> ' : '<span class="w" aria-hidden="true">⚠</span> ')
+        : ''}${esc(x.q.length > 78 ? x.q.slice(0, 78) + '…' : x.q)}</button>`).join('')
+    + (q ? '<button class="reset" id="rst">세부를 놓아준다 ↺</button>' : '');
+
+  $('mainTok').textContent = num(d.tokens.main) + ' 토큰 · 원문의 ' + d.ratios.resident + '%';
+  $('detTok').textContent = d.details.length + '개 · 합 ' + num(d.tokens.detail_all) + ' 토큰';
+  const lit = q ? q.picked : [];
+  $('detBadge').className = 'badge ' + (lit.length ? 'lit' : 'off');
+  $('detBadge').textContent = lit.length ? '이 질문이 ' + lit.length + '개 로드' : '미상주';
+  $('detPanel').classList.toggle('any', !!lit.length);
+
+  $('mainBody').innerHTML = d.main.lines.map((ln, i) => {
+    if (!ln.t.trim()) return '<div class="ln blank"></div>';
+    const hit = q && q.anchors.some(a => a.line === i);
+    let out = '', pos = 0;
+    ln.m.forEach((m, mi) => {
+      out += esc(ln.t.slice(pos, m.s));
+      const on = q && q.anchors.some(a => a.line === i && a.mark === mi);
+      const cls = on ? 'mk act' : (m.n ? 'mk res' : 'mk');
+      out += `<span class="${cls}" data-ln="${i}" data-mk="${mi}"${m.n ? ` data-name="${esc(m.n)}" title="${esc(m.n)}"` : ''}>${esc(m.t)}</span>`;
+      pos = m.e;
+    });
+    out += esc(ln.t.slice(pos));
+    return `<div class="ln${ln.c ? ' conv' : ''}${hit ? ' hit' : ''}" data-ln="${i}">`
+      + (ln.c ? '<span class="convtag">표기 규약</span>' : '') + out + '</div>';
+  }).join('');
+
+  $('detList').innerHTML = d.details.map(x => {
+    const on = lit.includes(x.name), pk = S.peek === x.name;
+    return `<div><button class="dcard${on ? ' lit' : pk ? ' peek' : ''}" data-name="${esc(x.name)}">
+        <span class="nm">${esc(x.name)}</span><span class="tk">${x.tokens}t</span></button>`
+      + ((on || pk) ? `<div class="dtext"><span class="cap">${on ? '이 질문이 읽은 파일' : '들여다보기 — 상주가 아니다'}</span>${esc(x.text.trim())}</div>` : '')
+      + '</div>';
+  }).join('');
+
+  renderResult();
+  requestAnimationFrame(drawWire);
+}
+
+function meter(d, q) {
+  const p1 = d.tokens.main / d.tokens.source * 100;
+  const p2 = q.picked_tokens / d.tokens.source * 100;
+  return `<div class="meter">
+    <div class="mhead">
+      <span class="cap">질문 시점에 실제로 읽은 토큰 — 원문 ${num(d.tokens.source)} 토큰 대비</span>
+      <span class="hero">${q.eff_pct}%<small>${num(q.eff_tokens)} 토큰</small></span>
+    </div>
+    <div class="track" role="img" aria-label="원문의 ${q.eff_pct}%를 읽었다">
+      <div class="fill f1" style="flex:0 0 ${p1.toFixed(2)}%"></div>
+      <div class="fill f2" style="flex:0 0 ${Math.max(p2, .4).toFixed(2)}%"></div>
+    </div>
+    <div class="legend">
+      <span class="k1"><i></i>메인 캐시(상주) <b>${num(d.tokens.main)}t · ${p1.toFixed(1)}%</b></span>
+      <span class="k2"><i></i>읽은 세부 ${q.picked.length}개 <b>${num(q.picked_tokens)}t · ${p2.toFixed(1)}%</b></span>
+      <span class="k3"><i></i>읽지 않은 나머지 <b>${(100 - q.eff_pct).toFixed(1)}%</b></span>
+    </div>
+    <details class="tv"><summary>표로 보기</summary>${table(d, q)}</details>
+  </div>`;
+}
+
+function table(d, q) {
+  const t = d.tokens, r = d.ratios;
+  const row = (k, v, p, extra) => `<tr><td>${k}</td><td>${num(v)}</td><td>${p}</td><td>${extra || ''}</td></tr>`;
+  return `<div class="tablewrap"><table>
+    <thead><tr><th>단계</th><th>토큰</th><th>원문 대비</th><th>KV</th></tr></thead><tbody>
+    ${row('원문', t.source, '100%', d.kv.source ? d.kv.source + ' MiB' : '')}
+    ${row('정제본', t.refined, r.refined + '%', d.kv.refined ? d.kv.refined + ' MiB' : '')}
+    ${row('분배 전체 (메인 + 세부 ' + d.details.length + ')', t.dist_all, r.dist_all + '%',
+        d.cost != null ? '표시 비용 +' + d.cost + '%' : '')}
+    ${row('상주분 = 메인만', t.main, r.resident + '%', d.kv.resident ? d.kv.resident + ' MiB' : '')}
+    ${row('★ 질문 시점 유효 (메인 + 읽은 세부 ' + q.picked.length + ')', q.eff_tokens, q.eff_pct + '%', '')}
+    </tbody></table></div>`;
+}
+
+function renderResult() {
+  const d = S.doc, q = S.q, el = $('result');
+  if (!q) {
+    el.className = 'result idle';
+    el.innerHTML = `<div class="rpad">위에서 질문을 고르면 — <b>라우터가 메인만 보고</b> 어느 세부를
+      읽어야 하는지 정한 기록, 그 근거, 대조군, 그리고 그때 실제로 읽은 토큰이 여기 나온다.</div>`;
+    return;
+  }
+  el.className = 'result';
+  const dd = (k, v) => v ? `<dt>${k}</dt><dd>${v}</dd>` : '';
+  el.innerHTML = `<div class="rpad">
+    <p class="rq">${esc(q.q)}</p>
+    <dl class="rgrid">
+      ${dd('라우터가 고른 것', q.picked.map(p => `<span class="chip">${esc(p)}</span>`).join('')
+          + ` <span style="color:var(--muted);font-size:12px">— 세부 ${d.details.length}개 중 ${q.picked.length}개</span>`)}
+      ${dd('그 근거', q.why ? `<span class="quote">${inl(q.why)}</span>`
+          : '<span style="color:var(--muted)">이 회차엔 근거가 기록되지 않았다</span>')}
+      ${dd('응답', `<span class="ok">${esc(q.answer)}</span>`)}
+      ${dd('정답', q.gold ? esc(q.gold) : '')}
+      ${dd('판정', `<b>${esc(q.verdict)}</b>`)}
+      ${dd('대조군', `
+        <div class="ctrl"><span class="k">캐시 없이</span><span>${q.no_context ? esc(q.no_context) : '이 회차엔 기록되지 않았다'}</span></div>
+        <div class="ctrl"><span class="k">메인만</span><span>${esc(q.control)}</span></div>`)}
+    </dl></div>
+    ${q.note ? `<div class="note${q.kind === '관찰' ? ' observe' : ''}">
+        <span aria-hidden="true">${q.kind === '관찰' ? '◆' : '⚠️'}</span>
+        <span><b>이 회차의 ${q.kind}</b> — ${inl(q.note)}</span></div>` : ''}
+    ${meter(d, q)}`;
+}
+
+/* 클릭 */
+$('ribbon').addEventListener('click', e => {
+  const b = e.target.closest('.step'); if (!b) return;
+  S.step = +b.dataset.i; render();
+});
+$('qRow').addEventListener('click', e => {
+  if (e.target.closest('#rst')) { S.q = null; S.step = 5; render(); return; }
+  const b = e.target.closest('.qbtn'); if (!b) return;
+  const x = S.doc.questions[+b.dataset.i];
+  S.q = (S.q === x) ? null : x; S.peek = null; S.step = 5;
+  render(); if (S.q) scrollToHit();
+});
+$('detList').addEventListener('click', e => {
+  const b = e.target.closest('.dcard'); if (!b) return;
+  const n = b.dataset.name;
+  if (S.q && S.q.picked.includes(n)) return;
+  S.peek = (S.peek === n) ? null : n; render();
+});
+$('mainBody').addEventListener('click', e => {
+  const m = e.target.closest('.mk'); if (!m || !m.dataset.name) return;
+  const n = m.dataset.name;
+  if (S.q && S.q.picked.includes(n)) return;
+  S.peek = (S.peek === n) ? null : n; render();
+  scrollInto($('detList').closest('.pbody'),
+    [...$('detList').querySelectorAll('.dcard')].find(x => x.dataset.name === n));
+});
+
+/* 패널 안에서만 굴린다 — scrollIntoView 는 창까지 끌고 내려간다 */
+function scrollInto(box, el) {
+  if (!box || !el) return;
+  box.scrollTop += el.getBoundingClientRect().top - box.getBoundingClientRect().top
+                 - box.clientHeight / 2 + el.offsetHeight / 2;
+}
+function scrollToHit() {
+  const a = $('mainBody').querySelector('.mk.act');
+  scrollInto($('mainBody'), a && a.closest('.ln'));
+  const c = $('detList').querySelector('.dcard.lit');
+  scrollInto($('detList').closest('.pbody'), c);
+  requestAnimationFrame(drawWire);
+}
+
+/* ── 메인의 마커 → 그 세부 파일로 잇는 선 */
+function drawWire() {
+  const svg = $('wire'), stage = $('stage');
+  svg.innerHTML = '';
+  if (!S.q || innerWidth <= 920 || !document.getElementById('demo').classList.contains('on')) return;
+  const sr = stage.getBoundingClientRect();
+  const mb = $('mainBody').getBoundingClientRect();
+  const db = $('detList').closest('.pbody').getBoundingClientRect();
+  const clamp = (y, r) => Math.max(r.top + 8, Math.min(r.bottom - 8, y));
+  const css = getComputedStyle(document.documentElement);
+  const col = css.getPropertyValue('--det').trim();
+  const surf = css.getPropertyValue('--surface').trim();
+
+  S.q.anchors.forEach(a => {
+    const m = $('mainBody').querySelector(`.mk[data-ln="${a.line}"][data-mk="${a.mark}"]`);
+    const c = [...$('detList').querySelectorAll('.dcard')].find(x => x.dataset.name === a.name);
+    if (!m || !c) return;
+    const mr = m.getBoundingClientRect(), cr = c.getBoundingClientRect();
+    const x1 = mr.right - sr.left + 2, y1 = clamp(mr.top + mr.height / 2, mb) - sr.top;
+    const x2 = cr.left - sr.left - 2, y2 = clamp(cr.top + cr.height / 2, db) - sr.top;
+    const dx = Math.max(18, (x2 - x1) * .55);
+    svg.insertAdjacentHTML('beforeend',
+      `<path d="M${x1} ${y1} C${x1 + dx} ${y1}, ${x2 - dx} ${y2}, ${x2} ${y2}"
+         fill="none" stroke="${col}" stroke-width="2" stroke-linecap="round"/>
+       <circle cx="${x1}" cy="${y1}" r="4" fill="${col}" stroke="${surf}" stroke-width="2"/>
+       <circle cx="${x2}" cy="${y2}" r="4" fill="${col}" stroke="${surf}" stroke-width="2"/>`);
+  });
+}
+addEventListener('resize', drawWire);
+$('mainBody').addEventListener('scroll', drawWire);
+$('detList').closest('.pbody').addEventListener('scroll', drawWire);
+
+render();
+show(location.hash.slice(1) || 'demo', false);
+</script>
+</body>
+</html>
