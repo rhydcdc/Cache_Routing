@@ -109,6 +109,12 @@ main{padding:44px 48px 96px; max-width:1440px; margin:0 auto; width:100%}
 .sec hr{border:0; border-top:1px solid var(--rule); margin:30px 0}
 
 .tablewrap{overflow-x:auto; margin:0 0 18px; border:1px solid var(--rule); border-radius:9px; background:var(--surface)}
+.simsvg{display:block; width:100%; height:auto; max-width:640px; margin:6px 0 18px; font-family:var(--sans)}
+.lgrow{display:flex; flex-wrap:wrap; gap:14px; margin:10px 0 4px; font-size:12px; color:var(--ink-2)}
+.lg{display:inline-flex; align-items:center; gap:6px}
+.lg i{width:14px; height:3px; border-radius:2px; display:inline-block}
+.sec .dim{color:var(--muted); font-size:12px}
+.sec h4{margin:16px 0 2px; font-size:13px; color:var(--ink-2); font-weight:600}
 .sec table{border-collapse:collapse; width:100%; font-size:13.5px; line-height:1.6}
 .sec th,.sec td{padding:9px 13px; text-align:left; border-bottom:1px solid var(--rule); vertical-align:top}
 .sec thead th{background:var(--surface-2); font-weight:600; font-size:12.5px; color:var(--ink-2); white-space:nowrap}
@@ -333,7 +339,7 @@ details.tv table{margin-top:10px}
     <ol>
       <li><a href="#demo" data-sec="demo" class="hero">아키텍처 실제 연출</a></li>
       <li class="gap"></li>
-      <li><a href="#s1" data-sec="s1">1. 아이디어</a></li><li><a href="#s2" data-sec="s2">2. 기여 둘</a></li><li><a href="#s3" data-sec="s3">3. 자연어 층이 하는 일 — 두 개의 인터페이스</a></li><li><a href="#s4" data-sec="s4">4. 무엇과 다른가 — MoE · RAG</a></li><li><a href="#s5" data-sec="s5">5. 파이프라인</a></li><li><a href="#s6" data-sec="s6">6. 무엇이 줄어드나</a></li><li><a href="#s7" data-sec="s7">7. 오케스트레이션 정책 — 언제 하나</a></li><li><a href="#s8" data-sec="s8">8. 결과</a></li><li><a href="#s9" data-sec="s9">9. 산출물</a></li>
+      <li><a href="#s1" data-sec="s1">1. 아이디어</a></li><li><a href="#s2" data-sec="s2">2. 기여 둘</a></li><li><a href="#s3" data-sec="s3">3. 자연어 층이 하는 일 — 두 개의 인터페이스</a></li><li><a href="#s4" data-sec="s4">4. 무엇과 다른가 — MoE · RAG</a></li><li><a href="#s5" data-sec="s5">5. 파이프라인</a></li><li><a href="#s6" data-sec="s6">6. 무엇이 줄어드나</a></li><li><a href="#s7" data-sec="s7">7. 오케스트레이션 정책 — 언제 하나</a></li><li><a href="#s8" data-sec="s8">8. 결과</a></li><li><a href="#s9" data-sec="s9">9. 엔드투엔드 시뮬레이션</a></li><li><a href="#s10" data-sec="s10">10. 산출물</a></li>
       <li class="gap"></li>
       <li><a href="#appendix" data-sec="appendix" class="hero">부록 — 불리한 문항</a></li>
     </ol>
@@ -605,11 +611,7 @@ MoE 모델 위에서 그대로 쓸 수 있다 — 기존 토큰 축출과 곱해
 <p><strong>RAG 와 가장 크게 갈리는 것은 라우터의 정체다.</strong> RAG 는 모델 밖에 검색기를 두지만
 여기서는 <strong>읽고 있는 맥락이 직접 무엇을 더 읽을지 가리킨다.</strong> 그래서 임베딩 공간도,
 인덱스도, 학습도 없다 — 소비 모델이 하는 일은 <strong>지금 필요한 문서를 찾아 읽는 행위와 같고</strong>,
-그 층위만 문서에서 캐시로 옮겨 간 것이다.</p>
-<blockquote>
-<p>굳이 가까운 비유를 찾자면 MoE 보다 <strong>가상 메모리·페이징</strong>이다 —
-상주 세트(메인)와 백킹 스토어(세부), 필요할 때 가져오기. 이름이 "포인터"인 이유다.</p>
-</blockquote></section><section class="sec" id="s5"><h2>5. 파이프라인</h2>
+그 층위만 문서에서 캐시로 옮겨 간 것이다.</p></section><section class="sec" id="s5"><h2>5. 파이프라인</h2>
 <table>
 <thead>
 <tr>
@@ -635,23 +637,41 @@ MoE 모델 위에서 그대로 쓸 수 있다 — 기존 토큰 축출과 곱해
 <tr>
 <td><strong>3</strong></td>
 <td><strong>리프리필</strong></td>
-<td>나뉜 자연어 파일을 각각 프리필한다</td>
+<td>나뉜 자연어 파일을 <strong>메인 → 세부 순으로 한 번에 이어서</strong> 프리필한다</td>
 <td><strong>자연어 → KV</strong></td>
 </tr>
 <tr>
 <td><strong>4</strong></td>
 <td><strong>보관</strong></td>
-<td>메인은 <strong>상주</strong>, 세부는 필요할 때 <strong>로드</strong>. 원본 캐시는 버린다</td>
+<td><strong>메인도 세부도 전부 KV 로 상주한다.</strong> 원본 캐시는 버린다</td>
 <td>KV</td>
 </tr>
 <tr>
 <td><strong>5</strong></td>
 <td><strong>질의</strong></td>
-<td>메인을 읽고 → 자연어로 판단 → 필요한 세부를 읽는다</td>
-<td><strong>자연어 판단 → KV 로드</strong></td>
+<td>답변을 쓰다가 필요한 지점에서 세부를 연다</td>
+<td><strong>벤트 → 어텐션 대상 합류</strong></td>
 </tr>
 </tbody>
-</table></section><section class="sec" id="s6"><h2>6. 무엇이 줄어드나</h2>
+</table>
+<p><strong>1 과 2 는 한 번의 생성이다.</strong> 입력을 보고 곧바로 분배된 파일들을 낸다 — 정제본을 먼저 뽑아
+다시 읽는 2패스가 아니다. ∴ <strong>정제 단계의 디코딩 비용은 0</strong> 이고 생성량은 분배 결과 전체뿐이다.</p>
+<h3>★ 벤트 — 세부는 답변 도중에 열린다</h3>
+<p>메인 본문에서 세부가 있는 자리에 <strong>주소 <code>^n</code></strong> 이 붙어 있다.</p>
+<pre><code>4 미르반도체가 오른 이유 ^11
+</code></pre>
+<pre><code>[프리필]  질문
+[디코드]  &quot;미르반도체가 오른 이유는 &quot;        ← 메인으로 답할 수 있는 데까지 먼저 쓴다
+          &quot;^11&quot;                          ← 값이 필요해진 지점에서 벤트 1토큰
+          ┗━ 그 순간 세부 KV 가 어텐션 대상에 합류
+          &quot; 2026-05-12 공시된 대형 수주입니다…&quot;
+</code></pre>
+<p>세부가 <strong>이미 KV 로 상주</strong>하므로 벤트는 <strong>연산이 아니라 마스크 변경</strong>이다 —
+PagedAttention 이면 block table 에 블록 ID 를 붙이는 것이 전부다.</p>
+<p><strong>답변 첫 토큰이 세부를 기다리지 않는다.</strong> 세부를 열기 전에 쓴 서두는 버려지는 게 아니라
+답변의 일부다 — 실측 10건 전부 메인으로 답할 수 있는 부분을 먼저 답했고
+<em>"네, 답변드리겠습니다"</em> 류의 빈 서두는 한 건도 없었다
+(<a href="../POINTER/EXPERIMENT/EXP4/REPORT/00_VENT.md">EXP4</a>).</p></section><section class="sec" id="s6"><h2>6. 무엇이 줄어드나</h2>
 <table>
 <thead>
 <tr>
@@ -672,10 +692,13 @@ MoE 모델 위에서 그대로 쓸 수 있다 — 기존 토큰 축출과 곱해
 </table>
 <p>둘은 다른 것을 판다. 상주 토큰은 저장 바이트이자 <strong>매 스텝 어텐션의 대상</strong>이므로,
 읽는 양이 절반이면 <strong>매 토큰이 훑는 양도 절반</strong>이다.</p>
-<p><strong>세부는 상주시키지 않는다.</strong> 읽고 나면 놓아준다 — 로드가 쌓여 상주분이 단일 캐시로 수렴하지 않는다.
-대신 같은 세부가 다시 필요하면 다시 프리필한다.</p>
+<p><strong>세부도 전부 KV 로 상주한다.</strong> 매 질문에서 <strong>무엇을 어텐션 대상에 넣을지만</strong> 고른다.
+같은 세부를 반복해 읽어도 공짜다. 대가는 <strong>총 저장량이 분배 전체만큼 그대로 남는다</strong>는 것 —
+위 표의 두 줄이 정말로 다른 축인 이유다.</p>
+<p><strong>위치(RoPE)</strong> — 정제 시점에 <code>[메인][세부1]…[세부k]</code> 를 한 번에 이어서 프리필하므로 위치가
+그때 정해진다. 질의 때는 읽을 것만 고를 뿐이고, 어텐션에서 키를 건너뛰는 건 위치를 안 건드린다.</p>
 <blockquote>
-<p>⚠️ <strong>KV 바이트만 실측했다.</strong> 지연·처리량은 재지 않았다.</p>
+<p>⚠️ <strong>KV 바이트만 실측했다.</strong> 지연·처리량은 §9 시뮬레이션의 계산이지 실기 측정이 아니다.</p>
 </blockquote></section><section class="sec" id="s7"><h2>7. 오케스트레이션 정책 — 언제 하나</h2>
 <p>정제와 분배는 공짜가 아니다. <strong>짧으면 아무것도 하지 않는다.</strong></p>
 <table>
@@ -709,8 +732,18 @@ MoE 모델 위에서 그대로 쓸 수 있다 — 기존 토큰 축출과 곱해
 <pre><code>t &lt; 임계   새 대화를 메인 캐시 뒤에 **원문 그대로 덧붙인다.** 정제도 분배도 하지 않는다
 t = 임계   ① 메인에 **갱신 시점 표시 줄**을 넣는다
            ② 메인 + **모든 세부** + 덧붙은 원문을 **통째로 다시 정제**한다
-           ③ 그 결과를 **통째로 다시 분배**한다
+           ③ 그 결과를 **통째로 다시 분배**하고, 메인 → 세부 순으로 한 번에 리프리필한다
 </code></pre>
+<h3>★ 임계는 고정값이 아니라 <strong>누적에 비례해 커진다</strong></h3>
+<p>맥락은 턴이 쌓이는 만큼 계속 자란다. 임계를 상수로 두면 <strong>뒤로 갈수록 갱신이 잦아진다</strong> —
+갱신 한 번의 비용은 「그때까지 쌓인 것 전체를 다시 쓰고 다시 프리필하는 것」이라 같이 자라는데,
+갱신 간격만 그대로면 총비용이 맥락 길이의 제곱으로 늘어난다.</p>
+<blockquote>
+<p><strong>쌓인 양이 상주 메인의 α 배에 닿을 때 갱신한다.</strong>
+그러면 갱신 시점이 기하급수적으로 벌어져 <strong>총 리프리필량이 원문의 상수배로 수렴한다.</strong></p>
+</blockquote>
+<p><a href="../SIM/REPORT/SWEEP5.md">엔드투엔드 시뮬레이션</a> 실측 — 절대 임계로 두면 <strong>턴당 0.8회</strong> 갱신하며
+리프리필 토큰이 답변 토큰의 5배가 된다. <code>α = 4~16</code> 이면 <strong>0.03~0.1회</strong>로 떨어진다.</p>
 <table>
 <thead>
 <tr>
@@ -791,19 +824,19 @@ t = 임계   ① 메인에 **갱신 시점 표시 줄**을 넣는다
 </tr>
 <tr>
 <td>분배 전체(저장)</td>
-<td>78.4%</td>
-<td>97.4%</td>
-<td>96.6%</td>
-<td><strong>55.2%</strong></td>
-<td><strong>51.0%</strong></td>
+<td>77.4%</td>
+<td>97.2%</td>
+<td>95.8%</td>
+<td><strong>54.4%</strong></td>
+<td><strong>50.6%</strong></td>
 </tr>
 <tr>
 <td>표시 비용</td>
-<td>+5.3%</td>
-<td>+14.0%</td>
-<td>+7.5%</td>
-<td><strong>+31.5%</strong></td>
-<td><strong>+10.3%</strong></td>
+<td>+4.0%</td>
+<td>+13.7%</td>
+<td>+6.5%</td>
+<td><strong>+29.6%</strong></td>
+<td><strong>+9.4%</strong></td>
 </tr>
 <tr>
 <td>세부 파일</td>
@@ -815,11 +848,11 @@ t = 임계   ① 메인에 **갱신 시점 표시 줄**을 넣는다
 </tr>
 <tr>
 <td><strong>질문 시점 유효</strong></td>
-<td><strong>44.0%</strong></td>
-<td><strong>68.2%</strong></td>
-<td><strong>72.0%</strong></td>
-<td><strong>22.8%</strong></td>
-<td><strong>26.4%</strong></td>
+<td><strong>43.0%</strong></td>
+<td><strong>68.0%</strong></td>
+<td><strong>71.1%</strong></td>
+<td><strong>22.0%</strong></td>
+<td><strong>26.0%</strong></td>
 </tr>
 </tbody>
 </table>
@@ -874,7 +907,7 @@ t = 임계   ① 메인에 **갱신 시점 표시 줄**을 넣는다
 <ul>
 <li><strong>프리필 호출의 고정비용.</strong> 세부를 잘게 나눌수록 호출 횟수가 늘어난다. 호출 한 번에 드는
   고정비용은 토큰으로 세어지지 않아 <strong>위 표에 안 잡혀 있다.</strong> 파일이 최대 25개까지 나왔으니 작지 않을 수 있다</li>
-<li><strong>지연과 처리량.</strong> 잰 것은 KV 바이트뿐이다. <strong>실제로 얼마나 빨라지는지는 확인하지 않았다</strong></li>
+<li><strong>실기 지연과 처리량.</strong> 잰 것은 KV 바이트뿐이다. §9 는 시뮬레이션이지 실기 측정이 아니다</li>
 <li><strong>정제·분배 자체의 비용.</strong> 다시 쓰고 다시 나누는 데 <strong>추가 연산과 메모리가 든다.</strong>
   응답과 동시에 병렬로 처리되므로 실제 체감 속도에는 영향을 거의 미치지 않지만 공짜는 아니다</li>
 </ul>
@@ -905,7 +938,7 @@ t = 임계   ① 메인에 **갱신 시점 표시 줄**을 넣는다
 <td>디코드는 <strong>메모리 대역 바운드</strong>라 연산 유닛이 논다. 정제·분배를 별도 프로세스로 돌리는 대신 <strong>같은 배치에 낮은 우선순위 스트림으로 태우면</strong> 벽시계 비용을 상당 부분 상각할 여지가 있다. ⚠️ 단 <strong>배치가 커지면 연산 바운드로 넘어가 이 여지가 사라지고</strong>, 프리필과 섞으면 TTFT 를 민다. <strong>재지 않았다</strong></td>
 </tr>
 </tbody>
-</table></section><section class="sec" id="s9"><h2>9. 산출물</h2>
+</table></section><section class="sec" id="s9"><h2>9. 엔드투엔드 시뮬레이션</h2><p>읽는 양이 줄면 서빙이 실제로 얼마나 빨라지나. 루프라인 시뮬레이터로 계산했다. 전부 <b>BASE 대비 %</b> 이고 BASE = 원문 누적(프리픽스 캐싱 있음)이다.</p><div class="tablewrap"><table><thead><tr><th>가정</th><th></th></tr></thead><tbody><tr><td>하드웨어</td><td>B200 × 8 — 대역폭 64 TB/s · FP8 36 PFLOPS · MFU 0.5</td></tr><tr><td>소비 모델</td><td><b>70B FP8</b> — 가중치 70 GB · KV 160 KiB/토큰 · 80층 · d 8192</td></tr><tr><td>정제·분배기</td><td><b>4B급</b> — 가중치 4 GB · KV 36 KiB/토큰 · 클러스터의 30% 를 일 있을 때만 점유</td></tr><tr><td>비용 모델</td><td><code>iteration = max(FLOPs/연산, bytes/대역폭)</code> · 청크 프리필을 디코드와 같은 iteration 에 얹는다</td></tr><tr><td>워크로드</td><td>세션 300 · 동시성 128 · 두 모드가 같은 시나리오를 같은 턴 수로 처리</td></tr><tr><td>재료 비율</td><td>§8 실측을 그대로 쓴다. 시뮬레이터가 바꾸지 않는다</td></tr><tr><td><b>정제 품질</b></td><td><b>4B 가 프론티어만큼 정제한다고 가정한다.</b> 우리 정제는 전부 프론티어가 했고 작은 모델은 재지 않았다</td></tr><tr><td>안 넣은 것</td><td>커널 런칭 · 오버랩 · 메모리 단편화 · 선점 · HBM 용량 상한</td></tr></tbody></table></div><h3>표준 동작점 — 세션 누적 중앙 145K · 임계 α=16 · 정제기 점유 30%</h3><svg viewBox="0 0 628 310" class="simsvg" role="img" aria-label="표준 동작점 지표별 BASE 대비 비율"><line x1="475" y1="18" x2="475" y2="290" stroke="var(--line)" stroke-dasharray="3 3"/><text x="475" y="12" fill="var(--muted)" font-size="10" text-anchor="middle">BASE 100%</text><text x="158" y="42" fill="var(--ink-2)" font-size="12" text-anchor="end">연산 FLOPs</text><rect x="168" y="26" width="269.0" height="13" rx="2" fill="var(--main)" opacity="0.92"/><text x="443.0" y="36" fill="var(--ink)" font-size="11">88% <tspan fill="var(--muted)">성긴</tspan></text><rect x="168" y="43" width="282.8" height="13" rx="2" fill="var(--det)" opacity="0.72"/><text x="456.8" y="53" fill="var(--ink)" font-size="11">92% <tspan fill="var(--muted)">밀집</tspan></text><text x="158" y="88" fill="var(--ink-2)" font-size="12" text-anchor="end">HBM 읽기</text><rect x="168" y="72" width="283.5" height="13" rx="2" fill="var(--main)" opacity="0.92"/><text x="457.5" y="82" fill="var(--ink)" font-size="11">92% <tspan fill="var(--muted)">성긴</tspan></text><rect x="168" y="89" width="283.1" height="13" rx="2" fill="var(--det)" opacity="0.72"/><text x="457.1" y="99" fill="var(--ink)" font-size="11">92% <tspan fill="var(--muted)">밀집</tspan></text><text x="158" y="134" fill="var(--ink-2)" font-size="12" text-anchor="end">상주 KV (용량)</text><rect x="168" y="118" width="222.2" height="13" rx="2" fill="var(--main)" opacity="0.92"/><text x="396.2" y="128" fill="var(--ink)" font-size="11">72% <tspan fill="var(--muted)">성긴</tspan></text><rect x="168" y="135" width="255.4" height="13" rx="2" fill="var(--det)" opacity="0.72"/><text x="429.4" y="145" fill="var(--ink)" font-size="11">83% <tspan fill="var(--muted)">밀집</tspan></text><text x="158" y="180" fill="var(--ink-2)" font-size="12" text-anchor="end">벽시계</text><rect x="168" y="164" width="301.8" height="13" rx="2" fill="var(--main)" opacity="0.92"/><text x="475.8" y="174" fill="var(--ink)" font-size="11">98% <tspan fill="var(--muted)">성긴</tspan></text><rect x="168" y="181" width="303.3" height="13" rx="2" fill="var(--det)" opacity="0.72"/><text x="477.3" y="191" fill="var(--ink)" font-size="11">99% <tspan fill="var(--muted)">밀집</tspan></text><text x="158" y="226" fill="var(--ink-2)" font-size="12" text-anchor="end">TBT p50</text><rect x="168" y="210" width="242.9" height="13" rx="2" fill="var(--main)" opacity="0.92"/><text x="416.9" y="220" fill="var(--ink)" font-size="11">79% <tspan fill="var(--muted)">성긴</tspan></text><rect x="168" y="227" width="259.4" height="13" rx="2" fill="var(--det)" opacity="0.72"/><text x="433.4" y="237" fill="var(--ink)" font-size="11">85% <tspan fill="var(--muted)">밀집</tspan></text><text x="158" y="272" fill="var(--ink-2)" font-size="12" text-anchor="end">TTFT p95</text><rect x="168" y="256" width="219.5" height="13" rx="2" fill="var(--main)" opacity="0.92"/><text x="393.5" y="266" fill="var(--ink)" font-size="11">72% <tspan fill="var(--muted)">성긴</tspan></text><rect x="168" y="273" width="229.5" height="13" rx="2" fill="var(--det)" opacity="0.72"/><text x="403.5" y="283" fill="var(--ink)" font-size="11">75% <tspan fill="var(--muted)">밀집</tspan></text></svg><div class="tablewrap"><table><thead><tr><th>지표</th><th>성긴(챗봇)</th><th>밀집(논문)</th></tr></thead><tbody><tr><td>연산 FLOPs</td><td><b>88%</b></td><td><b>92%</b></td></tr><tr><td>HBM 읽기</td><td><b>92%</b></td><td><b>92%</b></td></tr><tr><td>상주 KV (용량)</td><td><b>72%</b></td><td><b>83%</b></td></tr><tr><td>벽시계</td><td><b>98%</b></td><td><b>99%</b></td></tr><tr><td>TBT p50</td><td><b>79%</b> <span class="dim">2.29ms · BASE 2.89ms</span></td><td><b>85%</b> <span class="dim">3.15ms · BASE 3.73ms</span></td></tr><tr><td>TTFT p95</td><td><b>72%</b> <span class="dim">56ms · BASE 78ms</span></td><td><b>75%</b> <span class="dim">64ms · BASE 85ms</span></td></tr></tbody></table></div><h3>맥락이 길수록 벌어진다</h3><p>이 구조의 이득 = <b>읽는 양이 준 비율 × 디코드 스텝 수</b>. 둘 다 커지면 곱해진다. 가로축은 세션 누적 원문 중앙값(로그).</p><div class="lgrow"><span class="lg"><i style="background:var(--det)"></i>연산</span><span class="lg"><i style="background:var(--main)"></i>HBM</span><span class="lg"><i style="background:var(--ink-2)"></i>벽시계</span><span class="lg"><i style="background:var(--good)"></i>TBT p50</span><span class="lg"><i style="background:var(--warn)"></i>TTFT p95</span></div><h4>성긴 재료 (챗봇)</h4><svg viewBox="0 0 520 240" class="simsvg" role="img" aria-label="SPARSE 맥락 길이에 따른 BASE 대비 비율 추이"><line x1="46" y1="178.0" x2="512" y2="178.0" stroke="var(--rule)" stroke-width="0.7"/><text x="40" y="181.0" fill="var(--muted)" font-size="9.5" text-anchor="end">60%</text><line x1="46" y1="142.0" x2="512" y2="142.0" stroke="var(--rule)" stroke-width="0.7"/><text x="40" y="145.0" fill="var(--muted)" font-size="9.5" text-anchor="end">80%</text><line x1="46" y1="106.0" x2="512" y2="106.0" stroke="var(--rule)" stroke-width="1.4" stroke-dasharray='3 3'/><text x="40" y="109.0" fill="var(--muted)" font-size="9.5" text-anchor="end">100%</text><line x1="46" y1="70.0" x2="512" y2="70.0" stroke="var(--rule)" stroke-width="0.7"/><text x="40" y="73.0" fill="var(--muted)" font-size="9.5" text-anchor="end">120%</text><line x1="46" y1="34.0" x2="512" y2="34.0" stroke="var(--rule)" stroke-width="0.7"/><text x="40" y="37.0" fill="var(--muted)" font-size="9.5" text-anchor="end">140%</text><text x="46.0" y="232" fill="var(--muted)" font-size="9.5" text-anchor="middle">20K</text><text x="137.5" y="232" fill="var(--muted)" font-size="9.5" text-anchor="middle">51K</text><text x="236.4" y="232" fill="var(--muted)" font-size="9.5" text-anchor="middle">145K</text><text x="340.0" y="232" fill="var(--muted)" font-size="9.5" text-anchor="middle">433K</text><text x="421.8" y="232" fill="var(--muted)" font-size="9.5" text-anchor="middle">1.0M</text><text x="512.0" y="232" fill="var(--muted)" font-size="9.5" text-anchor="middle">2.6M</text><polyline points="46.0,56.7 137.5,101.3 236.4,128.3 340.0,137.7 421.8,143.8 512.0,153.6" fill="none" stroke="var(--det)" stroke-width="1.8"/><circle cx="46.0" cy="56.7" r="2.4" fill="var(--det)"/><circle cx="137.5" cy="101.3" r="2.4" fill="var(--det)"/><circle cx="236.4" cy="128.3" r="2.4" fill="var(--det)"/><circle cx="340.0" cy="137.7" r="2.4" fill="var(--det)"/><circle cx="421.8" cy="143.8" r="2.4" fill="var(--det)"/><circle cx="512.0" cy="153.6" r="2.4" fill="var(--det)"/><polyline points="46.0,102.7 137.5,109.5 236.4,120.7 340.0,137.1 421.8,148.6 512.0,158.0" fill="none" stroke="var(--main)" stroke-width="1.8"/><circle cx="46.0" cy="102.7" r="2.4" fill="var(--main)"/><circle cx="137.5" cy="109.5" r="2.4" fill="var(--main)"/><circle cx="236.4" cy="120.7" r="2.4" fill="var(--main)"/><circle cx="340.0" cy="137.1" r="2.4" fill="var(--main)"/><circle cx="421.8" cy="148.6" r="2.4" fill="var(--main)"/><circle cx="512.0" cy="158.0" r="2.4" fill="var(--main)"/><polyline points="46.0,106.1 137.5,106.7 236.4,108.2 340.0,125.6 421.8,136.2 512.0,156.5" fill="none" stroke="var(--ink-2)" stroke-width="1.8"/><circle cx="46.0" cy="106.1" r="2.4" fill="var(--ink-2)"/><circle cx="137.5" cy="106.7" r="2.4" fill="var(--ink-2)"/><circle cx="236.4" cy="108.2" r="2.4" fill="var(--ink-2)"/><circle cx="340.0" cy="125.6" r="2.4" fill="var(--ink-2)"/><circle cx="421.8" cy="136.2" r="2.4" fill="var(--ink-2)"/><circle cx="512.0" cy="156.5" r="2.4" fill="var(--ink-2)"/><polyline points="46.0,110.4 137.5,118.0 236.4,124.0 340.0,191.2 421.8,168.1 512.0,174.5" fill="none" stroke="var(--good)" stroke-width="1.8"/><circle cx="46.0" cy="110.4" r="2.4" fill="var(--good)"/><circle cx="137.5" cy="118.0" r="2.4" fill="var(--good)"/><circle cx="236.4" cy="124.0" r="2.4" fill="var(--good)"/><circle cx="340.0" cy="191.2" r="2.4" fill="var(--good)"/><circle cx="421.8" cy="168.1" r="2.4" fill="var(--good)"/><circle cx="512.0" cy="174.5" r="2.4" fill="var(--good)"/><polyline points="46.0,158.6 137.5,177.6 236.4,180.3 340.0,162.5 421.8,163.6 512.0,171.6" fill="none" stroke="var(--warn)" stroke-width="1.8"/><circle cx="46.0" cy="158.6" r="2.4" fill="var(--warn)"/><circle cx="137.5" cy="177.6" r="2.4" fill="var(--warn)"/><circle cx="236.4" cy="180.3" r="2.4" fill="var(--warn)"/><circle cx="340.0" cy="162.5" r="2.4" fill="var(--warn)"/><circle cx="421.8" cy="163.6" r="2.4" fill="var(--warn)"/><circle cx="512.0" cy="171.6" r="2.4" fill="var(--warn)"/></svg><h4>밀집 재료 (논문)</h4><svg viewBox="0 0 520 240" class="simsvg" role="img" aria-label="DENSE 맥락 길이에 따른 BASE 대비 비율 추이"><line x1="46" y1="178.0" x2="512" y2="178.0" stroke="var(--rule)" stroke-width="0.7"/><text x="40" y="181.0" fill="var(--muted)" font-size="9.5" text-anchor="end">60%</text><line x1="46" y1="142.0" x2="512" y2="142.0" stroke="var(--rule)" stroke-width="0.7"/><text x="40" y="145.0" fill="var(--muted)" font-size="9.5" text-anchor="end">80%</text><line x1="46" y1="106.0" x2="512" y2="106.0" stroke="var(--rule)" stroke-width="1.4" stroke-dasharray='3 3'/><text x="40" y="109.0" fill="var(--muted)" font-size="9.5" text-anchor="end">100%</text><line x1="46" y1="70.0" x2="512" y2="70.0" stroke="var(--rule)" stroke-width="0.7"/><text x="40" y="73.0" fill="var(--muted)" font-size="9.5" text-anchor="end">120%</text><line x1="46" y1="34.0" x2="512" y2="34.0" stroke="var(--rule)" stroke-width="0.7"/><text x="40" y="37.0" fill="var(--muted)" font-size="9.5" text-anchor="end">140%</text><text x="46.0" y="232" fill="var(--muted)" font-size="9.5" text-anchor="middle">20K</text><text x="137.5" y="232" fill="var(--muted)" font-size="9.5" text-anchor="middle">51K</text><text x="236.4" y="232" fill="var(--muted)" font-size="9.5" text-anchor="middle">145K</text><text x="340.0" y="232" fill="var(--muted)" font-size="9.5" text-anchor="middle">433K</text><text x="421.8" y="232" fill="var(--muted)" font-size="9.5" text-anchor="middle">1.0M</text><text x="512.0" y="232" fill="var(--muted)" font-size="9.5" text-anchor="middle">2.6M</text><polyline points="46.0,32.5 137.5,82.1 236.4,114.2 340.0,121.5 421.8,135.2 512.0,148.9" fill="none" stroke="var(--det)" stroke-width="1.8"/><circle cx="46.0" cy="32.5" r="2.4" fill="var(--det)"/><circle cx="137.5" cy="82.1" r="2.4" fill="var(--det)"/><circle cx="236.4" cy="114.2" r="2.4" fill="var(--det)"/><circle cx="340.0" cy="121.5" r="2.4" fill="var(--det)"/><circle cx="421.8" cy="135.2" r="2.4" fill="var(--det)"/><circle cx="512.0" cy="148.9" r="2.4" fill="var(--det)"/><polyline points="46.0,102.7 137.5,105.8 236.4,115.6 340.0,124.7 421.8,141.1 512.0,156.0" fill="none" stroke="var(--main)" stroke-width="1.8"/><circle cx="46.0" cy="102.7" r="2.4" fill="var(--main)"/><circle cx="137.5" cy="105.8" r="2.4" fill="var(--main)"/><circle cx="236.4" cy="115.6" r="2.4" fill="var(--main)"/><circle cx="340.0" cy="124.7" r="2.4" fill="var(--main)"/><circle cx="421.8" cy="141.1" r="2.4" fill="var(--main)"/><circle cx="512.0" cy="156.0" r="2.4" fill="var(--main)"/><polyline points="46.0,106.1 137.5,106.6 236.4,108.9 340.0,117.2 421.8,121.1 512.0,142.1" fill="none" stroke="var(--ink-2)" stroke-width="1.8"/><circle cx="46.0" cy="106.1" r="2.4" fill="var(--ink-2)"/><circle cx="137.5" cy="106.6" r="2.4" fill="var(--ink-2)"/><circle cx="236.4" cy="108.9" r="2.4" fill="var(--ink-2)"/><circle cx="340.0" cy="117.2" r="2.4" fill="var(--ink-2)"/><circle cx="421.8" cy="121.1" r="2.4" fill="var(--ink-2)"/><circle cx="512.0" cy="142.1" r="2.4" fill="var(--ink-2)"/><polyline points="46.0,112.0 137.5,115.6 236.4,128.3 340.0,163.1 421.8,165.1 512.0,174.8" fill="none" stroke="var(--good)" stroke-width="1.8"/><circle cx="46.0" cy="112.0" r="2.4" fill="var(--good)"/><circle cx="137.5" cy="115.6" r="2.4" fill="var(--good)"/><circle cx="236.4" cy="128.3" r="2.4" fill="var(--good)"/><circle cx="340.0" cy="163.1" r="2.4" fill="var(--good)"/><circle cx="421.8" cy="165.1" r="2.4" fill="var(--good)"/><circle cx="512.0" cy="174.8" r="2.4" fill="var(--good)"/><polyline points="46.0,130.2 137.5,147.7 236.4,167.9 340.0,157.8 421.8,150.5 512.0,155.5" fill="none" stroke="var(--warn)" stroke-width="1.8"/><circle cx="46.0" cy="130.2" r="2.4" fill="var(--warn)"/><circle cx="137.5" cy="147.7" r="2.4" fill="var(--warn)"/><circle cx="236.4" cy="167.9" r="2.4" fill="var(--warn)"/><circle cx="340.0" cy="157.8" r="2.4" fill="var(--warn)"/><circle cx="421.8" cy="150.5" r="2.4" fill="var(--warn)"/><circle cx="512.0" cy="155.5" r="2.4" fill="var(--warn)"/></svg><p><b>손익분기는 누적 5만~15만</b>이고 그 아래에서는 켜지 않는다(§7 하한). 그 위로는 단조롭게 벌어진다.</p><h3>TTFT — 벤트가 라우팅을 크리티컬 패스에서 뺀다</h3><svg viewBox="0 0 560 172" class="simsvg" role="img" aria-label="선행 라우터와 벤트의 타임라인 비교"><text x="6" y="43" fill="var(--ink)" font-size="12" font-weight="600">선행 라우터</text><rect x="96" y="26" width="84" height="26" rx="4" fill="var(--surface-2)" stroke="var(--ink-2)" stroke-width="1"/><text x="138.0" y="43" fill="var(--ink-2)" font-size="10.5" text-anchor="middle">질문 프리필</text><rect x="180" y="26" width="168" height="26" rx="4" fill="var(--det-wash)" stroke="var(--det)" stroke-width="1"/><text x="264.0" y="43" fill="var(--det)" font-size="10.5" text-anchor="middle">라우터 16토큰</text><rect x="348" y="26" width="180" height="26" rx="4" fill="var(--main-wash)" stroke="var(--main)" stroke-width="1"/><text x="438.0" y="43" fill="var(--main)" font-size="10.5" text-anchor="middle">답변</text><line x1="348" y1="17" x2="348" y2="61" stroke="var(--crit)" stroke-width="1.6"/><text x="353" y="71" fill="var(--crit)" font-size="10">TTFT 확정</text><text x="6" y="117" fill="var(--ink)" font-size="12" font-weight="600">벤트</text><rect x="96" y="100" width="84" height="26" rx="4" fill="var(--surface-2)" stroke="var(--ink-2)" stroke-width="1"/><text x="138.0" y="117" fill="var(--ink-2)" font-size="10.5" text-anchor="middle">질문 프리필</text><rect x="180" y="100" width="96" height="26" rx="4" fill="var(--main-wash)" stroke="var(--main)" stroke-width="1"/><text x="228.0" y="117" fill="var(--main)" font-size="10.5" text-anchor="middle">답변 서두</text><rect x="276" y="100" width="26" height="26" rx="4" fill="var(--det-wash)" stroke="var(--det)" stroke-width="1"/><text x="289.0" y="117" fill="var(--det)" font-size="10.5" text-anchor="middle">^n</text><rect x="302" y="100" width="226" height="26" rx="4" fill="var(--main-wash)" stroke="var(--main)" stroke-width="1"/><text x="415.0" y="117" fill="var(--main)" font-size="10.5" text-anchor="middle">답변 이어쓰기</text><line x1="180" y1="91" x2="180" y2="135" stroke="var(--crit)" stroke-width="1.6"/><text x="185" y="145" fill="var(--crit)" font-size="10">TTFT 확정</text><text x="6" y="166" fill="var(--muted)" font-size="10.5">세부는 이미 KV 로 상주한다 — 벤트는 연산이 아니라 어텐션 마스크 변경이다</text></svg><p>세부 이름을 답변 <b>전에</b> 뱉으면 그 토큰들이 전부 TTFT 에 얹힌다. 벤트는 그것을 답변 <b>안으로</b> 옮긴다 — 첫 토큰이 세부를 기다리지 않는다. 같은 조건에서 선행 라우터는 BASE 대비 162~246%, 벤트는 <b>72~75%</b> 다.</p><ul><li><b>연산·대역폭·용량·지연을 갈라 봐야 한다.</b> 디코드가 훑는 KV 는 줄지만 임계마다 리프리필이 들어간다. 그 줄다리기가 맥락 길이에 따라 뒤집힌다</li><li><b>TBT 가 가장 확실한 이득이다.</b> 매 디코드 스텝이 훑는 양이 직접 준다</li><li>⚠️ <b>용량은 정제가 줄인 만큼만 준다.</b> 세부도 상주하므로 분배는 용량에 기여하지 않는다</li></ul></section><section class="sec" id="s10"><h2>10. 산출물</h2>
 <p>이 아키텍처가 내놓는 것은 모델이 아니라 <strong>규약</strong>이다.</p>
 <table>
 <thead>
